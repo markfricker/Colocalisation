@@ -28,6 +28,10 @@ function results = colocPixelBasedRun(ch1, ch2, mask, p)
 %                           converged).
 %     .manders1/.manders2 - M1/M2 at the Costes threshold, or at
 %              p.manualThreshold1/2 if Costes' threshold didn't converge.
+%     .mandersThreshold1/.mandersThreshold2 - the threshold pair actually
+%              used for manders1/manders2 above, whichever source it came
+%              from -- callers should not assume that's costesTr/costesTg,
+%              since those are NaN whenever costesConverged is false.
 %     .randPValue        - Costes randomisation p-value on the
 %              whole-population r (see colocCostesRandomization).
 %     .randNullR         - [p.nIterations x 1] null distribution.
@@ -65,6 +69,8 @@ else
     T2 = p.manualThreshold2;
 end
 [results.manders1, results.manders2] = colocManders(ch1, ch2, mask, T1, T2);
+results.mandersThreshold1 = T1;
+results.mandersThreshold2 = T2;
 
 [results.randPValue, ~, results.randNullR] = colocCostesRandomization( ...
     ch1, ch2, mask, p.nIterations, p.blockSize, p.rngSeed);
