@@ -11,7 +11,8 @@ classdef testColocPixelBased < matlab.unittest.TestCase
 %   colocManders               — 4 tests
 %   colocCostesThreshold       — 3 tests
 %   colocCostesRandomization   — 4 tests
-%   colocPixelBasedRun         — 2 tests
+%   colocScoreImage            — 6 tests
+%   colocPixelBasedRun         — 5 tests
 %
 % REQUIREMENTS
 %   MATLAB R2019b+ (matlab.unittest framework)
@@ -252,6 +253,74 @@ classdef testColocPixelBased < matlab.unittest.TestCase
     end
 
     % =====================================================================
+    % colocScoreImage
+    % =====================================================================
+    methods (Test)
+        function testScoreImageGatesBelowThresholdToNaN(tc)
+            ch1 = [2 8; 12 20];
+            ch2 = [3 9; 11 21];
+            [scoreImage, gatedMask] = colocScoreImage(ch1, ch2, [], 10, 10, 'geomean');
+
+            tc.verifyEqual(gatedMask, logical([0 0; 1 1]));
+            tc.verifyTrue(isnan(scoreImage(1,1)));
+            tc.verifyTrue(isnan(scoreImage(1,2)));
+            tc.verifyFalse(isnan(scoreImage(2,1)));
+            tc.verifyFalse(isnan(scoreImage(2,2)));
+        end
+
+        function testScoreImageGeomeanRangeAndBrightestScoresOne(tc)
+            % A pixel that is simultaneously the brightest in both
+            % channels (among gated pixels) should score exactly 1; every
+            % gated score should fall in [0,1].
+            ch1 = [15 25 100];
+            ch2 = [16 30 90];
+            scoreImage = colocScoreImage(ch1, ch2, true(1,3), 10, 10, 'geomean');
+
+            tc.verifyEqual(scoreImage(3), 1, 'AbsTol', 1e-9);
+            tc.verifyGreaterThanOrEqual(min(scoreImage), 0);
+            tc.verifyLessThanOrEqual(max(scoreImage), 1);
+        end
+
+        function testScoreImagePdmSignConvention(tc)
+            % Gated population is idx 3 and 6; idx3 sits below the whole-
+            % mask mean in ch1 but above it in ch2 (negative PDM), idx6
+            % sits above the mean in both (positive PDM).
+            ch1 = [5, 8, 12, 30, 15, 20];
+            ch2 = [5, 9, 25, 8, 5, 30];
+            [scoreImage, gatedMask] = colocScoreImage(ch1, ch2, true(1,6), 10, 10, 'pdm');
+
+            tc.verifyEqual(find(gatedMask), [3 6]);
+            tc.verifyEqual(scoreImage(3), -34, 'AbsTol', 1e-3);
+            tc.verifyEqual(scoreImage(6), 81.6667, 'AbsTol', 1e-3);
+            tc.verifyTrue(isnan(scoreImage(1)));
+        end
+
+        function testScoreImageRespectsMask(tc)
+            ch1 = [20 20];
+            ch2 = [20 20];
+            mask = logical([1 0]);
+            [scoreImage, gatedMask] = colocScoreImage(ch1, ch2, mask, 5, 5, 'geomean');
+
+            tc.verifyFalse(gatedMask(2));
+            tc.verifyTrue(isnan(scoreImage(2)));
+        end
+
+        function testScoreImageAllBelowThresholdGivesAllNaN(tc)
+            ch1 = [1 2; 3 4];
+            ch2 = [1 2; 3 4];
+            [scoreImage, gatedMask] = colocScoreImage(ch1, ch2, [], 100, 100, 'geomean');
+
+            tc.verifyFalse(any(gatedMask, 'all'));
+            tc.verifyTrue(all(isnan(scoreImage), 'all'));
+        end
+
+        function testScoreImageUnknownTypeErrors(tc)
+            tc.verifyError(@() colocScoreImage([1 2], [1 2], [], 0, 0, 'bogus'), ...
+                'colocScoreImage:unknownScoreType');
+        end
+    end
+
+    % =====================================================================
     % colocPixelBasedRun (integration)
     % =====================================================================
     methods (Test)
@@ -267,6 +336,8 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             tc.verifyTrue(isfield(results, 'manders2'));
             tc.verifyEqual(size(results.pixelValues, 1), numel(ch1));
             tc.verifyEqual(numel(results.randNullR), p.nIterations);
+            tc.verifyEqual(size(results.scoreImage), size(ch1));
+            tc.verifyEqual(results.scoreType, 'geomean');
         end
 
         function testPixelBasedRunPixelValuesMatchMask(tc)
@@ -281,6 +352,37 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             tc.verifyEqual(size(results.pixelValues, 1), nnz(mask));
             tc.verifyEqual(results.pixelValues(:,1), double(ch1(results.maskLinearIdx)));
             tc.verifyEqual(results.pixelValues(:,2), double(ch2(results.maskLinearIdx)));
+        end
+
+        function testPixelBasedRunDefaultSaturationIsInfNoExclusion(tc)
+            p = colocParamsDefault();
+            tc.verifyEqual(p.saturationValue1, Inf);
+            tc.verifyEqual(p.saturationValue2, Inf);
+        end
+
+        function testPixelBasedRunExcludesSaturatedPixels(tc)
+            [ch1, ch2] = tc.correlatedPair([40 40], 1, 0, 1, 40);
+            ch1(1:5, 1:5) = 500;   % clipped/saturated block
+            p = colocParamsDefault();
+            p.nIterations = 20;
+            p.saturationValue1 = 500;
+
+            results = colocPixelBasedRun(ch1, ch2, [], p);
+
+            tc.verifyEqual(results.pearsonN, numel(ch1) - 25);
+            tc.verifyTrue(all(results.pixelValues(:,1) < 500));
+        end
+
+        function testPixelBasedRunScoreImageMatchesRequestedType(tc)
+            [ch1, ch2] = tc.correlatedPair([40 40], 2, 5, 1, 41);
+            p = colocParamsDefault();
+            p.nIterations = 20;
+            p.scoreType   = 'pdm';
+
+            results = colocPixelBasedRun(ch1, ch2, [], p);
+
+            tc.verifyEqual(results.scoreType, 'pdm');
+            tc.verifyTrue(any(~isnan(results.scoreImage), 'all'));
         end
     end
 end

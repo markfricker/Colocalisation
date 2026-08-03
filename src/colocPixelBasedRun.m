@@ -40,10 +40,17 @@ function results = colocPixelBasedRun(ch1, ch2, mask, p)
 %              have to recompute the mask.
 %     .maskLinearIdx     - [n x 1] linear indices into ch1/ch2 for each
 %              row of pixelValues, for image<->plot brushing.
+%     .scoreImage        - per-pixel colocalisation score, NaN outside the
+%              mandersThreshold1/2 gate -- see colocScoreImage. Same
+%              threshold Manders itself used, whichever source it came
+%              from, so the map and the M1/M2 numbers are always
+%              consistent with each other.
+%     .scoreType         - echoes p.scoreType ('geomean' or 'pdm').
 %
 % REFERENCES
 %   See colocPearson, colocManders, colocCostesThreshold,
-%   colocCostesRandomization for the individual method references.
+%   colocCostesRandomization, colocScoreImage for the individual method
+%   references.
 
 if nargin < 3 || isempty(mask)
     mask = true(size(ch1));
@@ -53,6 +60,17 @@ if nargin < 4 || isempty(p)
 end
 
 mask = mask & isfinite(ch1) & isfinite(ch2);
+
+% Exclude saturated pixels -- clipped intensities distort the true
+% intensity relationship and specifically corrupt Costes' regression fit.
+% Default Inf (no exclusion); see colocParamsDefault for why this is
+% never auto-detected.
+if isfield(p, 'saturationValue1') && isfinite(p.saturationValue1)
+    mask = mask & ch1 < p.saturationValue1;
+end
+if isfield(p, 'saturationValue2') && isfinite(p.saturationValue2)
+    mask = mask & ch2 < p.saturationValue2;
+end
 
 results = struct();
 
@@ -78,5 +96,12 @@ results.mandersThreshold2 = T2;
 linIdx = find(mask);
 results.pixelValues   = [double(ch1(linIdx)), double(ch2(linIdx))];
 results.maskLinearIdx = linIdx;
+
+scoreType = 'geomean';
+if isfield(p, 'scoreType') && ~isempty(p.scoreType)
+    scoreType = p.scoreType;
+end
+results.scoreImage = colocScoreImage(ch1, ch2, mask, T1, T2, scoreType);
+results.scoreType  = scoreType;
 
 end % colocPixelBasedRun
