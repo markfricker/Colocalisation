@@ -1,7 +1,7 @@
-function [Tr, Tg, rAtThreshold, converged] = colocCostesThreshold(ch1, ch2, mask)
+function [Tr, Tg, rAtThreshold, converged, fullyConverged] = colocCostesThreshold(ch1, ch2, mask)
 %COLOCCOSTESTHRESHOLD  Costes' automatic colocalisation threshold.
 %
-%   [Tr, Tg, rAtThreshold, converged] = colocCostesThreshold(ch1, ch2, mask)
+%   [Tr, Tg, rAtThreshold, converged, fullyConverged] = colocCostesThreshold(ch1, ch2, mask)
 %
 % Finds the intensity thresholds Tr (channel 1) and Tg (channel 2) that
 % objectively separate background/coincidental overlap from genuine
@@ -23,6 +23,17 @@ function [Tr, Tg, rAtThreshold, converged] = colocCostesThreshold(ch1, ch2, mask
 % pass (threshold Tr = xs(k) <-> below-threshold population = the k
 % dimmest pixels).
 %
+% Requiring r to actually cross <=0 assumes there is a genuinely
+% uncorrelated background population somewhere in the sampled pixels.
+% That assumption can fail -- e.g. when the mask already excludes
+% true background (a tight cell-boundary ROI), or when two adjacent
+% frames of the same live-cell data simply look very similar throughout
+% their whole intensity range -- in which case r asymptotes to some
+% small positive value and never reaches zero. Rather than discard the
+% fit, this falls back to the threshold at MINIMUM r (still read off the
+% same regression line/pixel ranking Costes' method already computed),
+% flagging that result as only partially converged via fullyConverged.
+%
 % INPUTS
 %   ch1, ch2 - equal-size 2D numeric intensity images.
 %   mask     - (optional) logical, same size, restricting the pixel
@@ -31,11 +42,16 @@ function [Tr, Tg, rAtThreshold, converged] = colocCostesThreshold(ch1, ch2, mask
 % OUTPUTS
 %   Tr, Tg       - channel-1/channel-2 thresholds. NaN if the regression
 %                  slope isn't positive (Costes' method assumes the two
-%                  channels trend together) or if r never reaches <=0
-%                  while lowering the threshold.
+%                  channels trend together) or if fewer than 3 pixels are
+%                  available.
 %   rAtThreshold - Pearson's r of the below-threshold population at the
-%                  chosen threshold (<=0 by construction when converged).
-%   converged    - true if a valid threshold was found.
+%                  chosen threshold (<=0 when fullyConverged; the
+%                  achieved minimum, still >0, otherwise).
+%   converged    - true if a usable threshold was found at all (full or
+%                  partial/min-r fallback).
+%   fullyConverged - true only if r actually reached <=0 (the strict
+%                  Costes criterion); false if the min-r fallback was
+%                  used instead, or if converged is false.
 %
 % REFERENCES
 %   Costes SV, Daelemans D, Cho EH, Dobbin Z, Pavlakis G, Lockett S (2004)
@@ -55,6 +71,7 @@ Tr = NaN;
 Tg = NaN;
 rAtThreshold = NaN;
 converged = false;
+fullyConverged = false;
 
 if n < 3
     return
@@ -87,15 +104,28 @@ rPrefix = num ./ den;   % rPrefix(k) = Pearson's r of the k dimmest (by ch1) pix
 rPrefix(k < 2) = NaN;
 
 kThresh = find(rPrefix <= 0, 1, 'last');
-if isempty(kThresh)
-    warning('colocCostesThreshold:noConvergence', ...
-        'Pearson''s r never dropped to <=0 while lowering the threshold; no valid Costes threshold found.');
+if ~isempty(kThresh)
+    Tr = xs(kThresh);
+    Tg = a * Tr + b;
+    rAtThreshold = rPrefix(kThresh);
+    converged = true;
+    fullyConverged = true;
     return
 end
 
-Tr = xs(kThresh);
+[rMin, kMin] = min(rPrefix, [], 'omitnan');
+if isempty(rMin) || isnan(rMin)
+    warning('colocCostesThreshold:noConvergence', ...
+        'Pearson''s r is undefined for every below-threshold population; no valid Costes threshold found.');
+    return
+end
+
+warning('colocCostesThreshold:partialConvergence', ...
+    'Pearson''s r never dropped to <=0 while lowering the threshold (min r = %.3f); using the minimum-r threshold as a partial-convergence fallback.', rMin);
+Tr = xs(kMin);
 Tg = a * Tr + b;
-rAtThreshold = rPrefix(kThresh);
+rAtThreshold = rMin;
 converged = true;
+fullyConverged = false;
 
 end % colocCostesThreshold

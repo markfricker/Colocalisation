@@ -22,12 +22,22 @@ function results = colocPixelBasedRun(ch1, ch2, mask, p)
 %   results - struct:
 %     .pearsonR          - whole-population Pearson's r.
 %     .pearsonN          - pixel count used for pearsonR.
-%     .costesTr/.costesTg - Costes threshold pair (NaN if not converged).
-%     .costesConverged   - logical.
+%     .costesTr/.costesTg - Costes threshold pair (NaN only if no usable
+%              threshold could be found at all -- see costesConverged).
+%     .costesConverged   - logical; true whenever costesTr/Tg are usable,
+%              whether from the strict criterion or the partial min-r
+%              fallback (see costesFullyConverged).
+%     .costesFullyConverged - logical; true only if the below-threshold
+%              population's r actually reached <=0 (the strict Costes
+%              criterion). False means costesTr/Tg came from the min-r
+%              fallback instead (see colocCostesThreshold) -- still a
+%              usable threshold, just not a true zero-crossing.
 %     .costesR           - r of the below-threshold population (<=0 when
-%                           converged).
-%     .manders1/.manders2 - M1/M2 at the Costes threshold, or at
-%              p.manualThreshold1/2 if Costes' threshold didn't converge.
+%                           costesFullyConverged, otherwise the achieved
+%                           minimum, still >0).
+%     .manders1/.manders2 - M1/M2 at the Costes threshold (full or
+%              partial-fallback), or at p.manualThreshold1/2 if no usable
+%              Costes threshold could be found at all.
 %     .mandersThreshold1/.mandersThreshold2 - the threshold pair actually
 %              used for manders1/manders2 above, whichever source it came
 %              from -- callers should not assume that's costesTr/costesTg,
@@ -77,8 +87,8 @@ results = struct();
 
 [results.pearsonR, results.pearsonN] = colocPearson(ch1, ch2, mask);
 
-[results.costesTr, results.costesTg, results.costesR, results.costesConverged] = ...
-    colocCostesThreshold(ch1, ch2, mask);
+[results.costesTr, results.costesTg, results.costesR, results.costesConverged, ...
+    results.costesFullyConverged] = colocCostesThreshold(ch1, ch2, mask);
 
 if results.costesConverged
     T1 = results.costesTr;

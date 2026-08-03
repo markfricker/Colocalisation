@@ -67,6 +67,25 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             ch1(sigMask) = sigVals1;
             ch2(sigMask) = sigVals1 + 2 * randn(nSig, 1);
         end
+
+        function [ch1, ch2] = wholeRangeCorrelatedPair(imSize, seedVal)
+            % Exact (noise-free) positive linear relationship across the
+            % WHOLE intensity range -- no independent background
+            % population anywhere. This is the clean idealisation of a
+            % tight cell-boundary mask (true background already excluded)
+            % or two near-identical adjacent frames: because the
+            % relationship holds exactly at every intensity, every
+            % below-threshold subpopulation has r=1, so r never crosses
+            % zero and colocCostesThreshold's min-r partial-convergence
+            % fallback must engage. (Any amount of real per-pixel noise
+            % lets a handful of the very dimmest pixels decorrelate by
+            % chance, which is enough for the strict criterion to be met
+            % right at the noise floor -- exact data is what reliably
+            % forces the fallback path for a deterministic unit test.)
+            rng(seedVal); %#ok<NASGU> -- kept for interface symmetry/reproducibility
+            ch1 = 100 * rand(imSize);
+            ch2 = 0.8 * ch1 + 5;
+        end
     end
 
     % =====================================================================
@@ -175,9 +194,10 @@ classdef testColocPixelBased < matlab.unittest.TestCase
     methods (Test)
         function testCostesThresholdSeparatesSignalFromBackground(tc)
             [ch1, ch2] = tc.signalPlusBackgroundPair([100 100], 5);
-            [Tr, Tg, rAtThreshold, converged] = colocCostesThreshold(ch1, ch2, []);
+            [Tr, Tg, rAtThreshold, converged, fullyConverged] = colocCostesThreshold(ch1, ch2, []);
 
             tc.verifyTrue(converged);
+            tc.verifyTrue(fullyConverged);
             tc.verifyLessThan(Tr, 30);          % well below the 50-100 signal band
             tc.verifyLessThanOrEqual(rAtThreshold, 1e-9);
 
@@ -186,6 +206,27 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             [M1, M2] = colocManders(ch1, ch2, [], Tr, Tg);
             tc.verifyGreaterThan(M1, 0.7);
             tc.verifyGreaterThan(M2, 0.7);
+        end
+
+        function testCostesThresholdPartialConvergenceUsesMinRFallback(tc)
+            % When r never crosses <=0 (no genuinely uncorrelated
+            % background population -- e.g. a tight mask, or two very
+            % similar-looking frames), the strict criterion isn't met but
+            % a usable threshold is still returned via the min-r fallback.
+            [ch1, ch2] = tc.wholeRangeCorrelatedPair([120 120], 51);
+
+            tc.verifyWarning(@() colocCostesThreshold(ch1, ch2, []), ...
+                'colocCostesThreshold:partialConvergence');
+
+            warnState = warning('off', 'colocCostesThreshold:partialConvergence');
+            cleanupObj = onCleanup(@() warning(warnState)); %#ok<NASGU>
+            [Tr, Tg, rAtThreshold, converged, fullyConverged] = colocCostesThreshold(ch1, ch2, []);
+
+            tc.verifyTrue(converged);
+            tc.verifyFalse(fullyConverged);
+            tc.verifyFalse(isnan(Tr));
+            tc.verifyFalse(isnan(Tg));
+            tc.verifyGreaterThan(rAtThreshold, 0);   % never actually reached <=0
         end
 
         function testCostesThresholdNonPositiveSlopeWarnsAndReturnsNaN(tc)
@@ -334,6 +375,7 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             tc.verifyGreaterThan(results.pearsonR, 0.5);
             tc.verifyTrue(isfield(results, 'manders1'));
             tc.verifyTrue(isfield(results, 'manders2'));
+            tc.verifyTrue(isfield(results, 'costesFullyConverged'));
             tc.verifyEqual(size(results.pixelValues, 1), numel(ch1));
             tc.verifyEqual(numel(results.randNullR), p.nIterations);
             tc.verifyEqual(size(results.scoreImageGeomean), size(ch1));
