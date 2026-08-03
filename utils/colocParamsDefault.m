@@ -28,11 +28,14 @@ function p = colocParamsDefault()
 %                        corrupts Costes' regression fit. Default Inf (no
 %                        exclusion): only the user knows their instrument's
 %                        real ceiling and typical background level, so
-%                        this is never auto-detected.
+%                        this function itself never auto-detects a value
+%                        -- a caller wanting an auto-detect policy (e.g.
+%                        "exclude pixels at a channel's own observed max")
+%                        computes a concrete value and passes it in here
+%                        like any other threshold.
 %
-%   colocScoreImage
-%   ----------------------------------------------------------------------
-%   scoreType     'geomean' (default) or 'pdm' -- see colocScoreImage.
+%   colocPixelBasedRun always computes both colocScoreImage variants
+%   ('geomean' and 'pdm') -- no params field needed to select one.
 
 p.nIterations      = 100;
 p.blockSize        = 3;    % px, ~PSF FWHM
@@ -42,7 +45,5 @@ p.manualThreshold2 = 0;
 
 p.saturationValue1 = Inf;
 p.saturationValue2 = Inf;
-
-p.scoreType        = 'geomean';
 
 end % colocParamsDefault

@@ -40,12 +40,13 @@ function results = colocPixelBasedRun(ch1, ch2, mask, p)
 %              have to recompute the mask.
 %     .maskLinearIdx     - [n x 1] linear indices into ch1/ch2 for each
 %              row of pixelValues, for image<->plot brushing.
-%     .scoreImage        - per-pixel colocalisation score, NaN outside the
-%              mandersThreshold1/2 gate -- see colocScoreImage. Same
-%              threshold Manders itself used, whichever source it came
-%              from, so the map and the M1/M2 numbers are always
-%              consistent with each other.
-%     .scoreType         - echoes p.scoreType ('geomean' or 'pdm').
+%     .scoreImageGeomean/.scoreImagePdm - both per-pixel colocalisation
+%              score images (see colocScoreImage), NaN outside the
+%              mandersThreshold1/2 gate -- same threshold Manders itself
+%              used, whichever source it came from, so the maps and the
+%              M1/M2 numbers are always consistent with each other. Both
+%              are always computed (cheap relative to the randomisation
+%              test) so a caller can offer either without re-running.
 %
 % REFERENCES
 %   See colocPearson, colocManders, colocCostesThreshold,
@@ -97,11 +98,7 @@ linIdx = find(mask);
 results.pixelValues   = [double(ch1(linIdx)), double(ch2(linIdx))];
 results.maskLinearIdx = linIdx;
 
-scoreType = 'geomean';
-if isfield(p, 'scoreType') && ~isempty(p.scoreType)
-    scoreType = p.scoreType;
-end
-results.scoreImage = colocScoreImage(ch1, ch2, mask, T1, T2, scoreType);
-results.scoreType  = scoreType;
+results.scoreImageGeomean = colocScoreImage(ch1, ch2, mask, T1, T2, 'geomean');
+results.scoreImagePdm     = colocScoreImage(ch1, ch2, mask, T1, T2, 'pdm');
 
 end % colocPixelBasedRun

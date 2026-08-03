@@ -336,8 +336,8 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             tc.verifyTrue(isfield(results, 'manders2'));
             tc.verifyEqual(size(results.pixelValues, 1), numel(ch1));
             tc.verifyEqual(numel(results.randNullR), p.nIterations);
-            tc.verifyEqual(size(results.scoreImage), size(ch1));
-            tc.verifyEqual(results.scoreType, 'geomean');
+            tc.verifyEqual(size(results.scoreImageGeomean), size(ch1));
+            tc.verifyEqual(size(results.scoreImagePdm), size(ch1));
         end
 
         function testPixelBasedRunPixelValuesMatchMask(tc)
@@ -373,16 +373,17 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             tc.verifyTrue(all(results.pixelValues(:,1) < 500));
         end
 
-        function testPixelBasedRunScoreImageMatchesRequestedType(tc)
+        function testPixelBasedRunBothScoreImagesAlwaysComputed(tc)
             [ch1, ch2] = tc.correlatedPair([40 40], 2, 5, 1, 41);
             p = colocParamsDefault();
             p.nIterations = 20;
-            p.scoreType   = 'pdm';
 
             results = colocPixelBasedRun(ch1, ch2, [], p);
 
-            tc.verifyEqual(results.scoreType, 'pdm');
-            tc.verifyTrue(any(~isnan(results.scoreImage), 'all'));
+            tc.verifyTrue(any(~isnan(results.scoreImageGeomean), 'all'));
+            tc.verifyTrue(any(~isnan(results.scoreImagePdm), 'all'));
+            % Same gate for both -- identical NaN pattern.
+            tc.verifyEqual(isnan(results.scoreImageGeomean), isnan(results.scoreImagePdm));
         end
     end
 end
