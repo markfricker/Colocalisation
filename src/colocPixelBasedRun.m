@@ -22,14 +22,15 @@ function results = colocPixelBasedRun(ch1, ch2, mask, p)
 %   results - struct:
 %     .pearsonR          - whole-population Pearson's r.
 %     .pearsonN          - pixel count used for pearsonR.
-%     .costesTr/.costesTg - Costes threshold pair (NaN only if no usable
-%              threshold could be found at all -- see costesConverged).
-%     .costesConverged   - logical; true whenever costesTr/Tg are usable,
+%     .costesT1/.costesT2 - Costes threshold pair (named for the channel
+%              index, not colour -- NaN only if no usable threshold could
+%              be found at all -- see costesConverged).
+%     .costesConverged   - logical; true whenever costesT1/T2 are usable,
 %              whether from the strict criterion or the partial min-r
 %              fallback (see costesFullyConverged).
 %     .costesFullyConverged - logical; true only if the below-threshold
 %              population's r actually reached <=0 (the strict Costes
-%              criterion). False means costesTr/Tg came from the min-r
+%              criterion). False means costesT1/T2 came from the min-r
 %              fallback instead (see colocCostesThreshold) -- still a
 %              usable threshold, just not a true zero-crossing.
 %     .costesR           - r of the below-threshold population (<=0 when
@@ -40,7 +41,7 @@ function results = colocPixelBasedRun(ch1, ch2, mask, p)
 %              Costes threshold could be found at all.
 %     .mandersThreshold1/.mandersThreshold2 - the threshold pair actually
 %              used for manders1/manders2 above, whichever source it came
-%              from -- callers should not assume that's costesTr/costesTg,
+%              from -- callers should not assume that's costesT1/costesT2,
 %              since those are NaN whenever costesConverged is false.
 %     .randPValue        - Costes randomisation p-value on the
 %              whole-population r (see colocCostesRandomization).
@@ -87,12 +88,12 @@ results = struct();
 
 [results.pearsonR, results.pearsonN] = colocPearson(ch1, ch2, mask);
 
-[results.costesTr, results.costesTg, results.costesR, results.costesConverged, ...
+[results.costesT1, results.costesT2, results.costesR, results.costesConverged, ...
     results.costesFullyConverged] = colocCostesThreshold(ch1, ch2, mask);
 
 if results.costesConverged
-    T1 = results.costesTr;
-    T2 = results.costesTg;
+    T1 = results.costesT1;
+    T2 = results.costesT2;
 else
     T1 = p.manualThreshold1;
     T2 = p.manualThreshold2;

@@ -1,9 +1,9 @@
-function [Tr, Tg, rAtThreshold, converged, fullyConverged] = colocCostesThreshold(ch1, ch2, mask)
+function [T1, T2, rAtThreshold, converged, fullyConverged] = colocCostesThreshold(ch1, ch2, mask)
 %COLOCCOSTESTHRESHOLD  Costes' automatic colocalisation threshold.
 %
-%   [Tr, Tg, rAtThreshold, converged, fullyConverged] = colocCostesThreshold(ch1, ch2, mask)
+%   [T1, T2, rAtThreshold, converged, fullyConverged] = colocCostesThreshold(ch1, ch2, mask)
 %
-% Finds the intensity thresholds Tr (channel 1) and Tg (channel 2) that
+% Finds the intensity thresholds T1 (channel 1) and T2 (channel 2) that
 % objectively separate background/coincidental overlap from genuine
 % colocalising signal, removing the subjectivity of a hand-dragged
 % Manders' threshold.
@@ -20,7 +20,7 @@ function [Tr, Tg, rAtThreshold, converged, fullyConverged] = colocCostesThreshol
 % O(n log n) rather than iterating literal threshold steps: pixels are
 % sorted once by channel-1 intensity, and r of every possible
 % below-threshold prefix is obtained from cumulative sums in a single
-% pass (threshold Tr = xs(k) <-> below-threshold population = the k
+% pass (threshold T1 = xs(k) <-> below-threshold population = the k
 % dimmest pixels).
 %
 % Requiring r to actually cross <=0 assumes there is a genuinely
@@ -40,10 +40,12 @@ function [Tr, Tg, rAtThreshold, converged, fullyConverged] = colocCostesThreshol
 %              population. Default: all finite pixels in both channels.
 %
 % OUTPUTS
-%   Tr, Tg       - channel-1/channel-2 thresholds. NaN if the regression
-%                  slope isn't positive (Costes' method assumes the two
-%                  channels trend together) or if fewer than 3 pixels are
-%                  available.
+%   T1, T2       - channel-1/channel-2 thresholds (named for the channel
+%                  index, not colour -- AnalyzER's two compared channels
+%                  are user-selectable, not necessarily red/green).
+%                  NaN if the regression slope isn't positive (Costes'
+%                  method assumes the two channels trend together) or if
+%                  fewer than 3 pixels are available.
 %   rAtThreshold - Pearson's r of the below-threshold population at the
 %                  chosen threshold (<=0 when fullyConverged; the
 %                  achieved minimum, still >0, otherwise).
@@ -67,8 +69,8 @@ x = double(ch1(mask));
 y = double(ch2(mask));
 n = numel(x);
 
-Tr = NaN;
-Tg = NaN;
+T1 = NaN;
+T2 = NaN;
 rAtThreshold = NaN;
 converged = false;
 fullyConverged = false;
@@ -107,8 +109,8 @@ rPrefix(k < 2) = NaN;
 
 kThresh = find(rPrefix <= 0, 1, 'last');
 if ~isempty(kThresh)
-    Tr = xs(kThresh);
-    Tg = a * Tr + b;
+    T1 = xs(kThresh);
+    T2 = a * T1 + b;
     rAtThreshold = rPrefix(kThresh);
     converged = true;
     fullyConverged = true;
@@ -120,8 +122,8 @@ if isempty(rMin) || isnan(rMin)
     return
 end
 
-Tr = xs(kMin);
-Tg = a * Tr + b;
+T1 = xs(kMin);
+T2 = a * T1 + b;
 rAtThreshold = rMin;
 converged = true;
 fullyConverged = false;

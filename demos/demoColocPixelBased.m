@@ -37,7 +37,7 @@ function demoColocPixelBased(seedVal)
 
     fprintf('Pearson''s r (whole image):    %.3f (n=%d)\n', results.pearsonR, results.pearsonN);
     fprintf('Costes threshold converged:   %d\n', results.costesConverged);
-    fprintf('  Tr = %.2f, Tg = %.2f\n', results.costesTr, results.costesTg);
+    fprintf('  T1 = %.2f, T2 = %.2f\n', results.costesT1, results.costesT2);
     fprintf('Manders M1 / M2 (at threshold): %.3f / %.3f\n', results.manders1, results.manders2);
     fprintf('Costes randomisation p-value: %.3f\n', results.randPValue);
 
@@ -56,8 +56,8 @@ function demoColocPixelBased(seedVal)
         'MarkerFaceAlpha', 0.3);
     hold on;
     if results.costesConverged
-        xline(results.costesTr, 'r--');
-        yline(results.costesTg, 'r--');
+        xline(results.costesT1, 'r--');
+        yline(results.costesT2, 'r--');
     end
     hold off;
     xlabel('Channel 1 intensity');

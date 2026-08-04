@@ -194,16 +194,16 @@ classdef testColocPixelBased < matlab.unittest.TestCase
     methods (Test)
         function testCostesThresholdSeparatesSignalFromBackground(tc)
             [ch1, ch2] = tc.signalPlusBackgroundPair([100 100], 5);
-            [Tr, Tg, rAtThreshold, converged, fullyConverged] = colocCostesThreshold(ch1, ch2, []);
+            [T1, T2, rAtThreshold, converged, fullyConverged] = colocCostesThreshold(ch1, ch2, []);
 
             tc.verifyTrue(converged);
             tc.verifyTrue(fullyConverged);
-            tc.verifyLessThan(Tr, 30);          % well below the 50-100 signal band
+            tc.verifyLessThan(T1, 30);          % well below the 50-100 signal band
             tc.verifyLessThanOrEqual(rAtThreshold, 1e-9);
 
             % Above-threshold population should recover strong overlap
             % (the near-perfectly-correlated signal block).
-            [M1, M2] = colocManders(ch1, ch2, [], Tr, Tg);
+            [M1, M2] = colocManders(ch1, ch2, [], T1, T2);
             tc.verifyGreaterThan(M1, 0.7);
             tc.verifyGreaterThan(M2, 0.7);
         end
@@ -219,12 +219,12 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             % runs per real cell region would flood the console.
             [ch1, ch2] = tc.wholeRangeCorrelatedPair([120 120], 51);
 
-            [Tr, Tg, rAtThreshold, converged, fullyConverged] = colocCostesThreshold(ch1, ch2, []);
+            [T1, T2, rAtThreshold, converged, fullyConverged] = colocCostesThreshold(ch1, ch2, []);
 
             tc.verifyTrue(converged);
             tc.verifyFalse(fullyConverged);
-            tc.verifyFalse(isnan(Tr));
-            tc.verifyFalse(isnan(Tg));
+            tc.verifyFalse(isnan(T1));
+            tc.verifyFalse(isnan(T2));
             tc.verifyGreaterThan(rAtThreshold, 0);   % never actually reached <=0
         end
 
@@ -233,10 +233,10 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             % tells the caller), not exceptional.
             [ch1, ch2] = tc.correlatedPair([50 50], -1, 100, 2, 6);
 
-            [Tr, ~, ~, converged] = colocCostesThreshold(ch1, ch2, []);
+            [T1, ~, ~, converged] = colocCostesThreshold(ch1, ch2, []);
 
             tc.verifyFalse(converged);
-            tc.verifyTrue(isnan(Tr));
+            tc.verifyTrue(isnan(T1));
         end
 
         function testCostesThresholdTooFewPixelsReturnsNotConverged(tc)
@@ -244,9 +244,9 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             ch2 = rand(2, 2);
             mask = false(2, 2);
             mask(1, 1) = true;   % only 1 pixel -> below the n<3 floor
-            [Tr, ~, ~, converged] = colocCostesThreshold(ch1, ch2, mask);
+            [T1, ~, ~, converged] = colocCostesThreshold(ch1, ch2, mask);
             tc.verifyFalse(converged);
-            tc.verifyTrue(isnan(Tr));
+            tc.verifyTrue(isnan(T1));
         end
     end
 
