@@ -213,13 +213,12 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             % background population -- e.g. a tight mask, or two very
             % similar-looking frames), the strict criterion isn't met but
             % a usable threshold is still returned via the min-r fallback.
+            % No console warning -- this is an expected, handled outcome
+            % (converged/fullyConverged already tell the caller), not an
+            % exceptional one; firing per-cell now that colocalisation
+            % runs per real cell region would flood the console.
             [ch1, ch2] = tc.wholeRangeCorrelatedPair([120 120], 51);
 
-            tc.verifyWarning(@() colocCostesThreshold(ch1, ch2, []), ...
-                'colocCostesThreshold:partialConvergence');
-
-            warnState = warning('off', 'colocCostesThreshold:partialConvergence');
-            cleanupObj = onCleanup(@() warning(warnState)); %#ok<NASGU>
             [Tr, Tg, rAtThreshold, converged, fullyConverged] = colocCostesThreshold(ch1, ch2, []);
 
             tc.verifyTrue(converged);
@@ -229,14 +228,11 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             tc.verifyGreaterThan(rAtThreshold, 0);   % never actually reached <=0
         end
 
-        function testCostesThresholdNonPositiveSlopeWarnsAndReturnsNaN(tc)
+        function testCostesThresholdNonPositiveSlopeReturnsNaNNoWarning(tc)
+            % No console warning -- expected, handled outcome (converged
+            % tells the caller), not exceptional.
             [ch1, ch2] = tc.correlatedPair([50 50], -1, 100, 2, 6);
 
-            tc.verifyWarning(@() colocCostesThreshold(ch1, ch2, []), ...
-                'colocCostesThreshold:nonPositiveSlope');
-
-            warnState = warning('off', 'colocCostesThreshold:nonPositiveSlope');
-            cleanupObj = onCleanup(@() warning(warnState)); %#ok<NASGU>
             [Tr, ~, ~, converged] = colocCostesThreshold(ch1, ch2, []);
 
             tc.verifyFalse(converged);

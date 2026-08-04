@@ -82,8 +82,10 @@ a = fit(1);
 b = fit(2);
 
 if ~(a > 0)
-    warning('colocCostesThreshold:nonPositiveSlope', ...
-        'Regression slope is not positive; Costes'' threshold is undefined for this channel pair.');
+    % Not exceptional -- callers already get this via converged=false and
+    % the GUI already surfaces it; no console warning (was pure noise
+    % once colocalisation started running per-cell, firing once per
+    % weakly-correlated cell on every Run).
     return
 end
 
@@ -115,13 +117,9 @@ end
 
 [rMin, kMin] = min(rPrefix, [], 'omitnan');
 if isempty(rMin) || isnan(rMin)
-    warning('colocCostesThreshold:noConvergence', ...
-        'Pearson''s r is undefined for every below-threshold population; no valid Costes threshold found.');
     return
 end
 
-warning('colocCostesThreshold:partialConvergence', ...
-    'Pearson''s r never dropped to <=0 while lowering the threshold (min r = %.3f); using the minimum-r threshold as a partial-convergence fallback.', rMin);
 Tr = xs(kMin);
 Tg = a * Tr + b;
 rAtThreshold = rMin;
