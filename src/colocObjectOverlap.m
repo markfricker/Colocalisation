@@ -1,10 +1,12 @@
-function [objectOut, pairOut, summaryOut] = colocObjectOverlap(morphologyStats, cellIDIn, chA, chB, calibration, contactDistance, nShuffles, code, opts)
+function [objectOut, pairOut, summaryOut, neighbourOut] = colocObjectOverlap(morphologyStats, cellIDIn, chA, chB, calibration, contactDistance, nShuffles, code, opts)
 %COLOCOBJECTOVERLAP  Object-based colocalisation between two segmented
 % organelle channels: per-pair overlap, per-object overlap/contact/nearest
-% distance, per-cell summary, and an object-shuffle significance test.
+% distance, k-nearest partners, per-cell summary, and an object-shuffle
+% significance test.
 %
-%   [objectOut, pairOut, summaryOut] = colocObjectOverlap(morphologyStats, ...
-%       cellIDIn, chA, chB, calibration, contactDistance, nShuffles, code, opts)
+%   [objectOut, pairOut, summaryOut, neighbourOut] = colocObjectOverlap( ...
+%       morphologyStats, cellIDIn, chA, chB, calibration, contactDistance, ...
+%       nShuffles, code, opts)
 %
 % Object-based counterpart to the pixel-based core (colocPixelBasedRun):
 % rather than asking whether two channels' INTENSITIES co-vary, it asks
@@ -51,6 +53,8 @@ function [objectOut, pairOut, summaryOut] = colocObjectOverlap(morphologyStats, 
 %                    (default false).
 %     .rngSeed     - reproducible shuffles (global RNG restored after).
 %     .progressFcn - @(fracDone, message) -> cancelled, once per cell.
+%     .kNearest    - number of nearest partners listed per object in
+%                    neighbourOut (default 3; 0 = skip).
 %
 % OUTPUTS (each {1 x nZ x nT} cell array of tables; distances in microns,
 % areas in microns^2)
@@ -73,6 +77,15 @@ function [objectOut, pairOut, summaryOut] = colocObjectOverlap(morphologyStats, 
 %                pMoreOverlap, pLessOverlap, objM1NullMean, pMoreContact,
 %                pLessContact, fracAContactNullMean, fallbackFraction,
 %                nShuffles.
+%   neighbourOut - DiAna-style k-nearest partners: for every object of
+%                EITHER population, one row per rank 1..min(k, #partners
+%                in the cell): filename, channel, partnerChannel, section,
+%                frame, cellID, organelleID, rank, partnerID, edgeDistance
+%                (closest pixel-to-pixel distance, 0 if overlapping; rank
+%                order), centreDistance (centroid-to-centroid). Rank-1
+%                edgeDistance equals objectOut's nearestPartnerDistance.
+%                Direction-agnostic (distance transform), unlike the
+%                normal-direction ray-cast of organelleD2OrganelleCompute.
 
 if nargin < 9 || isempty(opts)
     opts = struct();
@@ -83,6 +96,8 @@ end
 shOpts = struct('dihedral', isfield(opts,'dihedral') && ~isempty(opts.dihedral) && opts.dihedral);
 progressFcn = [];
 if isfield(opts, 'progressFcn'), progressFcn = opts.progressFcn; end
+kNearest = 3;
+if isfield(opts, 'kNearest') && ~isempty(opts.kNearest), kNearest = opts.kNearest; end
 if isfield(opts, 'rngSeed') && ~isempty(opts.rngSeed)
     prevState  = rng(opts.rngSeed);
     restoreRng = onCleanup(@() rng(prevState)); %#ok<NASGU>
@@ -90,9 +105,10 @@ end
 
 [nC_in, nZ, nT]    = size(morphologyStats);
 [nY, nX, cC, cZ, cT] = size(cellIDIn);
-objectOut  = cell(1, nZ, nT);
-pairOut    = cell(1, nZ, nT);
-summaryOut = cell(1, nZ, nT);
+objectOut    = cell(1, nZ, nT);
+pairOut      = cell(1, nZ, nT);
+summaryOut   = cell(1, nZ, nT);
+neighbourOut = cell(1, nZ, nT);
 if max(chA, chB) > nC_in
     return
 end
@@ -116,11 +132,12 @@ for iJob = 1:nJobs
     cellMask = cellIDIn(:,:, min(cC,chA), min(cZ,iZ), min(cT,iT)) == g;
 
     meta = struct('code', code, 'chA', chA, 'chB', chB, 'iZ', iZ, 'iT', iT, 'g', g);
-    [O, P, S] = cellOverlap(SA, SB, cellMask, [nY nX], calibration, ...
-        contactDistance, nShuffles, shOpts, meta);
-    objectOut{1,iZ,iT}  = [objectOut{1,iZ,iT};  O];
-    pairOut{1,iZ,iT}    = [pairOut{1,iZ,iT};    P];
-    summaryOut{1,iZ,iT} = [summaryOut{1,iZ,iT}; S];
+    [O, P, S, N] = cellOverlap(SA, SB, cellMask, [nY nX], calibration, ...
+        contactDistance, nShuffles, shOpts, meta, kNearest);
+    objectOut{1,iZ,iT}    = [objectOut{1,iZ,iT};    O];
+    pairOut{1,iZ,iT}      = [pairOut{1,iZ,iT};      P];
+    summaryOut{1,iZ,iT}   = [summaryOut{1,iZ,iT};   S];
+    neighbourOut{1,iZ,iT} = [neighbourOut{1,iZ,iT}; N];
 
     if ~isempty(progressFcn)
         if progressFcn(iJob / nJobs, sprintf('Object overlap: cell %d of %d', iJob, nJobs))
@@ -146,7 +163,7 @@ end % cellsInPlane
 
 
 % =========================================================================
-function [O, P, S] = cellOverlap(SA, SB, cellMask, imSize, cal, dContact, nShuffles, shOpts, meta)
+function [O, P, S, N] = cellOverlap(SA, SB, cellMask, imSize, cal, dContact, nShuffles, shOpts, meta, kNearest)
 %CELLOVERLAP  Single-cell worker -- see colocObjectOverlap for docs.
 
 pixA = pixLists(SA);  idA = objIDs(SA);  nA = numel(pixA);
@@ -197,6 +214,31 @@ P = table(repmat({meta.code}, nPairs, 1), repmat(meta.chA, nPairs, 1), ...
 [OA, nearA] = objectRows(cpA, idA, areaA, LB > 0, edgeA, upr(:,1), ovArea, cal, dContact, meta, meta.chA, meta.chB);
 [OB, nearB] = objectRows(cpB, idB, areaB, LA > 0, edgeB, upr(:,2), ovArea, cal, dContact, meta, meta.chB, meta.chA);
 O = [OA; OB];
+
+% --- k-nearest partners (both directions) ----------------------------------
+% Edge distance E(a,b) = closest pixel-to-pixel distance, symmetric, so one
+% distance transform per object of the SMALLER population fills the matrix.
+N = table.empty;
+if kNearest > 0 && nA > 0 && nB > 0
+    E = zeros(nA, nB);
+    if nA <= nB
+        for a = 1:nA
+            D = bwdist(LA == a);
+            E(a, :) = cellfun(@(x) min(D(x)), cpB);
+        end
+    else
+        for b = 1:nB
+            D = bwdist(LB == b);
+            E(:, b) = cellfun(@(x) min(D(x)), cpA);
+        end
+    end
+    E = double(E) * cal;   % bwdist returns single
+    cenA = cropCentroidsRC(cpA, nYc);
+    cenB = cropCentroidsRC(cpB, nYc);
+    C = sqrt((cenA(:,1) - cenB(:,1)').^2 + (cenA(:,2) - cenB(:,2)').^2) * cal;
+    N = [knnRows(idA, idB, E,  C,  kNearest, meta, meta.chA, meta.chB); ...
+         knnRows(idB, idA, E', C', kNearest, meta, meta.chB, meta.chA)];
+end
 
 % --- per cell summary + shuffle test --------------------------------------
 totA = sum(areaA);  totB = sum(areaB);
@@ -278,6 +320,33 @@ O = table(repmat({meta.code}, n, 1), repmat(ch, n, 1), repmat(partnerCh, n, 1), 
     'nearestPartnerDistance','contactFraction','colocalised','inContact'});
 end % objectRows
 
+
+% =========================================================================
+function N = knnRows(ids, partnerIds, E, C, k, meta, ch, partnerCh)
+%KNNROWS  One row per (object, rank) for the k nearest partners by edge
+% distance (ties broken by centre distance).
+n  = numel(ids);
+kk = min(k, numel(partnerIds));
+rows = cell(n, 1);
+for i = 1:n
+    [~, order] = sortrows([E(i,:)' C(i,:)']);
+    j = order(1:kk);
+    rows{i} = table(repmat(ids(i), kk, 1), (1:kk)', partnerIds(j), E(i,j)', C(i,j)', ...
+        'VariableNames', {'organelleID','rank','partnerID','edgeDistance','centreDistance'});
+end
+N = cat(1, rows{:});
+m = height(N);
+N = [table(repmat({meta.code}, m, 1), repmat(ch, m, 1), repmat(partnerCh, m, 1), ...
+    repmat(meta.iZ, m, 1), repmat(meta.iT, m, 1), repmat(meta.g, m, 1), ...
+    'VariableNames', {'filename','channel','partnerChannel','section','frame','cellID'}), N];
+end % knnRows
+
+function rc = cropCentroidsRC(cp, nYc)
+rc = zeros(numel(cp), 2);
+for k = 1:numel(cp)
+    rc(k, :) = [mean(mod(cp{k} - 1, nYc) + 1), mean(floor((cp{k} - 1) / nYc) + 1)];
+end
+end
 
 % =========================================================================
 function p = pixLists(S)

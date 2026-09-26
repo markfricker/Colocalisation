@@ -9,6 +9,8 @@ classdef testColocObjectOverlap < matlab.unittest.TestCase
 %   Known pair geometry (overlap area, fracOfA/B, Jaccard, per-object
 %     rows, nearest distance and contact of a lone object)          — 1 test
 %   One A object with two B partners                                 — 1 test
+%   k-nearest partners: ranks, edge/centre distances, symmetry,
+%     rank-1 = nearestPartnerDistance, kNearest=0 skips              — 1 test
 %   Shuffle test: associated populations -> pMoreOverlap/Contact small;
 %     independent populations -> false-positive rate controlled      — 2 tests
 %   Empty partner population, same-channel error, per-cell
@@ -104,6 +106,35 @@ classdef testColocObjectOverlap < matlab.unittest.TestCase
             tc.verifyEqual(S.fracAOverlapping, 0.5);
             tc.verifyEqual(S.objM1, 50/200, 'AbsTol', 1e-12);
             tc.verifyTrue(isnan(S.pMoreOverlap));            % nShuffles = 0
+        end
+
+        function testKNearestPartners(tc)
+            % A1 overlaps B1; B2 is 5 px below A1; B3 far away.
+            A = {testColocObjectOverlap.rect(21:30, 21:30)};
+            B = {testColocObjectOverlap.rect(21:30, 26:35); ...     % overlaps A1
+                 testColocObjectOverlap.rect(36:40, 21:30); ...     % rows 30->36: 6 px
+                 testColocObjectOverlap.rect(81:85, 81:85)};        % far
+            ms = {testColocObjectOverlap.stats(A); testColocObjectOverlap.stats(B)};
+            [Oc, ~, ~, Nc] = colocObjectOverlap(ms, ones(testColocObjectOverlap.Sz), 1, 2, ...
+                testColocObjectOverlap.Cal, 0.2, 0, 'f', struct('kNearest', 2));
+            N = Nc{1}; O = Oc{1};
+            NA = N(N.channel == 1, :);
+            tc.verifyEqual(NA.rank, [1; 2]);                         % k = 2 of 3 partners
+            tc.verifyEqual(NA.partnerID, [1; 2]);
+            tc.verifyEqual(NA.edgeDistance, [0; 0.6], 'AbsTol', 1e-9);
+            tc.verifyEqual(NA.centreDistance(1), 0.5, 'AbsTol', 1e-9);  % centroids 5 px apart
+            % rank-1 edge distance matches objectOut's nearestPartnerDistance
+            OA = O(O.channel == 1, :);
+            tc.verifyEqual(NA.edgeDistance(1), OA.nearestPartnerDistance(1), 'AbsTol', 1e-9);
+            % reverse direction: each B lists its single A partner (only 1 A)
+            NB = N(N.channel == 2, :);
+            tc.verifyEqual(height(NB), 3);
+            tc.verifyEqual(sortrows(NB(:, {'organelleID','edgeDistance'})).edgeDistance(1:2), [0; 0.6], 'AbsTol', 1e-9);
+            % symmetric: A1->B2 distance equals B2->A1 distance
+            tc.verifyEqual(NB.edgeDistance(NB.organelleID == 2), NA.edgeDistance(2), 'AbsTol', 1e-9);
+            % kNearest = 0 skips the table
+            [~, ~, ~, N0] = colocObjectOverlap(ms, ones(testColocObjectOverlap.Sz), 1, 2, 0.1, 0.2, 0, 'f', struct('kNearest', 0));
+            tc.verifyTrue(isempty(N0{1}));
         end
 
         function testTwoPartners(tc)
