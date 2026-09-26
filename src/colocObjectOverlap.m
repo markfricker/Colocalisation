@@ -55,6 +55,11 @@ function [objectOut, pairOut, summaryOut, neighbourOut] = colocObjectOverlap(mor
 %     .progressFcn - @(fracDone, message) -> cancelled, once per cell.
 %     .kNearest    - number of nearest partners listed per object in
 %                    neighbourOut (default 3; 0 = skip).
+%     .statsB      - {nCb x nZ x nT} stats array for population B, when it
+%                    does not live in morphologyStats (e.g. A = ER
+%                    cisternae via colocCisternaeObjects, B = organelle
+%                    morphology). chB then indexes statsB, and chA may equal
+%                    chB. B is the population that gets shuffled.
 %
 % OUTPUTS (each {1 x nZ x nT} cell array of tables; distances in microns,
 % areas in microns^2)
@@ -90,7 +95,13 @@ function [objectOut, pairOut, summaryOut, neighbourOut] = colocObjectOverlap(mor
 if nargin < 9 || isempty(opts)
     opts = struct();
 end
-if chA == chB
+% Population B normally comes from the same stats array (a different
+% channel); opts.statsB supplies it from a separate array instead (e.g. A =
+% ER cisternae, B = organelle morphology), in which case chA == chB is fine.
+statsB = morphologyStats;
+if isfield(opts, 'statsB') && ~isempty(opts.statsB)
+    statsB = opts.statsB;
+elseif chA == chB
     error('colocObjectOverlap:sameChannel', 'chA and chB must be different channels.');
 end
 shOpts = struct('dihedral', isfield(opts,'dihedral') && ~isempty(opts.dihedral) && opts.dihedral);
@@ -109,7 +120,7 @@ objectOut    = cell(1, nZ, nT);
 pairOut      = cell(1, nZ, nT);
 summaryOut   = cell(1, nZ, nT);
 neighbourOut = cell(1, nZ, nT);
-if max(chA, chB) > nC_in
+if chA > nC_in || chB > size(statsB, 1)
     return
 end
 
@@ -117,7 +128,7 @@ end
 jobs = zeros(0, 3);
 for iT = 1:nT
     for iZ = 1:nZ
-        g = cellsInPlane(morphologyStats{chA,iZ,iT}, morphologyStats{chB,iZ,iT});
+        g = cellsInPlane(morphologyStats{chA,iZ,iT}, statsB{chB,min(iZ,size(statsB,2)),min(iT,size(statsB,3))});
         jobs = [jobs; repmat([iZ iT], numel(g), 1), g(:)]; %#ok<AGROW>
     end
 end
@@ -126,9 +137,9 @@ nJobs = size(jobs, 1);
 for iJob = 1:nJobs
     iZ = jobs(iJob,1); iT = jobs(iJob,2); g = jobs(iJob,3);
     SA = morphologyStats{chA,iZ,iT};
-    SB = morphologyStats{chB,iZ,iT};
-    SA = SA(SA.cellID == g, :);
-    SB = SB(SB.cellID == g, :);
+    SB = statsB{chB,min(iZ,size(statsB,2)),min(iT,size(statsB,3))};
+    SA = cellRows(SA, g);
+    SB = cellRows(SB, g);
     cellMask = cellIDIn(:,:, min(cC,chA), min(cZ,iZ), min(cT,iT)) == g;
 
     meta = struct('code', code, 'chA', chA, 'chB', chB, 'iZ', iZ, 'iT', iT, 'g', g);
@@ -148,6 +159,16 @@ end
 
 end % colocObjectOverlap
 
+
+% =========================================================================
+function S = cellRows(S, g)
+% rows of stats table S in cell g; a missing/empty slot becomes an empty table
+if istable(S) && ~isempty(S) && ismember('cellID', S.Properties.VariableNames)
+    S = S(S.cellID == g, :);
+else
+    S = table.empty;
+end
+end % cellRows
 
 % =========================================================================
 function g = cellsInPlane(SA, SB)
