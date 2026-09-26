@@ -91,7 +91,12 @@ function [objectOut, pairOut, summaryOut, neighbourOut] = colocObjectOverlap(mor
 %                cell), contactFraction (perimeter pixels within
 %                contactDistance of the partner population),
 %                colocalised (overlapArea > 0), inContact
-%                (nearestPartnerDistance <= contactDistance).
+%                (nearestPartnerDistance <= contactDistance), population
+%                ('A'/'B' -- unambiguous even when chA == chB), and
+%                linkX1/linkY1 -> linkX2/linkY2: full-image pixel [x y] of
+%                the object's own closest pixel and of the closest partner
+%                pixel (the nearest-partner link; equal points when
+%                overlapping; NaN without partners). See colocObjectLinks.
 %   pairOut    - one row per overlapping (A,B) pair: filename, channel
 %                (=chA), partnerChannel (=chB), section, frame, cellID, organelleIDA,
 %                organelleIDB, overlapArea, fracOfA, fracOfB, jaccard.
@@ -307,8 +312,9 @@ P = table(repmat({meta.code}, nPairs, 1), repmat(meta.chA, nPairs, 1), ...
     'organelleIDA','organelleIDB','overlapArea','fracOfA','fracOfB','jaccard'});
 
 % --- per object, both directions ------------------------------------------
-[OA, nearA] = objectRows(cpA, idA, areaA, LB > 0, edgeA, upr(:,1), ovArea, cal, dContact, meta, meta.chA, meta.chB);
-[OB, nearB] = objectRows(cpB, idB, areaB, LA > 0, edgeB, upr(:,2), ovArea, cal, dContact, meta, meta.chB, meta.chA);
+off = struct('r0', r0, 'c0', c0);
+[OA, nearA] = objectRows(cpA, idA, areaA, LB > 0, edgeA, upr(:,1), ovArea, cal, dContact, meta, meta.chA, meta.chB, off, 'A');
+[OB, nearB] = objectRows(cpB, idB, areaB, LA > 0, edgeB, upr(:,2), ovArea, cal, dContact, meta, meta.chB, meta.chA, off, 'B');
 O = [OA; OB];
 
 % --- k-nearest partners (both directions) ----------------------------------
@@ -452,16 +458,22 @@ end % cellOverlap
 
 
 % =========================================================================
-function [O, nearest] = objectRows(cp, ids, areas, partnerMask, edgeMask, pairOwner, ovArea, cal, dContact, meta, ch, partnerCh)
+function [O, nearest] = objectRows(cp, ids, areas, partnerMask, edgeMask, pairOwner, ovArea, cal, dContact, meta, ch, partnerCh, off, population)
 n = numel(cp);
 nearest = nan(n, 1);
 contact = nan(n, 1);
+link = nan(n, 4);      % [x y] of own closest pixel, [x y] of partner's closest pixel (full-image px)
 if any(partnerMask(:))
-    D = double(bwdist(partnerMask)) * cal;
+    [Ds, IDX] = bwdist(partnerMask);
+    D = double(Ds) * cal;
+    szc = size(partnerMask);
     for k = 1:n
-        nearest(k) = min(D(cp{k}));
+        [nearest(k), j] = min(D(cp{k}));
         pk = cp{k}(edgeMask(cp{k}));
         contact(k) = mean(D(pk) <= dContact);
+        [ro, co] = ind2sub(szc, cp{k}(j));
+        [rp, cq] = ind2sub(szc, double(IDX(cp{k}(j))));
+        link(k, :) = [co + off.c0 - 1, ro + off.r0 - 1, cq + off.c0 - 1, rp + off.r0 - 1];
     end
 end
 ovObj = accumarray(pairOwner(:), ovArea(:), [n 1]);  % sum over this object's pairs
@@ -472,6 +484,9 @@ O = table(repmat({meta.code}, n, 1), repmat(ch, n, 1), repmat(partnerCh, n, 1), 
     'VariableNames', {'filename','channel','partnerChannel','section','frame','cellID', ...
     'organelleID','area','overlapArea','overlapFraction','nPartners', ...
     'nearestPartnerDistance','contactFraction','colocalised','inContact'});
+O.population = repmat({population}, n, 1);
+O.linkX1 = link(:,1);  O.linkY1 = link(:,2);
+O.linkX2 = link(:,3);  O.linkY2 = link(:,4);
 end % objectRows
 
 
