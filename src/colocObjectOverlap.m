@@ -63,8 +63,8 @@ function [objectOut, pairOut, summaryOut] = colocObjectOverlap(morphologyStats, 
 %                contactDistance of the partner population),
 %                colocalised (overlapArea > 0), inContact
 %                (nearestPartnerDistance <= contactDistance).
-%   pairOut    - one row per overlapping (A,B) pair: filename, channelA,
-%                channelB, section, frame, cellID, organelleIDA,
+%   pairOut    - one row per overlapping (A,B) pair: filename, channel
+%                (=chA), partnerChannel (=chB), section, frame, cellID, organelleIDA,
 %                organelleIDB, overlapArea, fracOfA, fracOfB, jaccard.
 %   summaryOut - one row per cell: filename, channel (=chA),
 %                partnerChannel (=chB), section, frame, cellID, nA, nB,
@@ -190,7 +190,7 @@ jac     = ovArea ./ (areaA(upr(:,1)) + areaB(upr(:,2)) - ovArea);
 P = table(repmat({meta.code}, nPairs, 1), repmat(meta.chA, nPairs, 1), ...
     repmat(meta.chB, nPairs, 1), repmat(meta.iZ, nPairs, 1), repmat(meta.iT, nPairs, 1), ...
     repmat(meta.g, nPairs, 1), idA(upr(:,1)), idB(upr(:,2)), ovArea, fracOfA, fracOfB, jac, ...
-    'VariableNames', {'filename','channelA','channelB','section','frame','cellID', ...
+    'VariableNames', {'filename','channel','partnerChannel','section','frame','cellID', ...
     'organelleIDA','organelleIDB','overlapArea','fracOfA','fracOfB','jaccard'});
 
 % --- per object, both directions ------------------------------------------
