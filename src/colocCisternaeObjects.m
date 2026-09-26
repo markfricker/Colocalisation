@@ -14,7 +14,10 @@ function [objStats, info] = colocCisternaeObjects(cisternaeStats, cisternaeClass
 %   streamsThreshold - cisternaeSpeedMax at/above which a cisterna counts as
 %                      a stream (same units and meaning as the Results/Plot
 %                      streams filter). <= 0 means "no streams
-%                      classification": every cisterna is ordinary.
+%                      classification": every cisterna is ordinary. Only
+%                      used when the tables lack the saved cisternaeIsStream
+%                      flag (analyzerCisternaeStreamsFlag, NetworkCommon);
+%                      when present, that flag decides the class.
 %
 % OUTPUTS
 %   objStats - same-size cell array of tables with the columns
@@ -56,6 +59,12 @@ for k = 1:numel(cisternaeStats)
     if hasSpeed
         T.cisternaeSpeedMax = double(S.cisternaeSpeedMax);
         info.hasSpeed = true;
+    end
+    if ismember('cisternaeIsStream', S.Properties.VariableNames)
+        % saved flag (analyzerCisternaeStreamsFlag) is the source of truth
+        T.isStream = logical(S.cisternaeIsStream);
+    elseif hasSpeed
+        % older results without the saved flag: classify here
         T.isStream = streamsThreshold > 0 & T.cisternaeSpeedMax >= streamsThreshold;
     else
         T.isStream = false(n, 1);

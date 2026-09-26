@@ -55,6 +55,13 @@ function [objectOut, pairOut, summaryOut, neighbourOut] = colocObjectOverlap(mor
 %     .progressFcn - @(fracDone, message) -> cancelled, once per cell.
 %     .kNearest    - number of nearest partners listed per object in
 %                    neighbourOut (default 3; 0 = skip).
+%     .labelColumns - struct of constants appended as columns to every output
+%                    table, recording the run settings (e.g.
+%                    struct('cisternaeClass','streams','streamsThreshold',0.5)),
+%                    so saved sheets from different runs stay distinguishable.
+%                    If any input table has an isStream column, objectOut
+%                    also gets a per-object isStream column (NaN for the
+%                    population without it).
 %     .statsB      - {nCb x nZ x nT} stats array for population B, when it
 %                    does not live in morphologyStats (e.g. A = ER
 %                    cisternae via colocCisternaeObjects, B = organelle
@@ -124,6 +131,16 @@ if chA > nC_in || chB > size(statsB, 1)
     return
 end
 
+% Optional per-object isStream flag (ER cisternae via colocCisternaeObjects)
+% is carried into objectOut whenever ANY input table has it, so every cell's
+% table has the same columns (NaN for objects of a population without it).
+hasIsStream = @(X) any(cellfun(@(t) istable(t) && ismember('isStream', t.Properties.VariableNames), X(:)));
+carryStream = hasIsStream(morphologyStats(chA,:,:)) || hasIsStream(statsB(chB,:,:));
+labelColumns = struct();
+if isfield(opts, 'labelColumns') && isstruct(opts.labelColumns)
+    labelColumns = opts.labelColumns;
+end
+
 % cell count for progress reporting
 jobs = zeros(0, 3);
 for iT = 1:nT
@@ -145,6 +162,13 @@ for iJob = 1:nJobs
     meta = struct('code', code, 'chA', chA, 'chB', chB, 'iZ', iZ, 'iT', iT, 'g', g);
     [O, P, S, N] = cellOverlap(SA, SB, cellMask, [nY nX], calibration, ...
         contactDistance, nShuffles, shOpts, meta, kNearest);
+    if carryStream
+        O.isStream = [objColumn(SA, 'isStream'); objColumn(SB, 'isStream')];
+    end
+    O = addLabels(O, labelColumns);
+    P = addLabels(P, labelColumns);
+    S = addLabels(S, labelColumns);
+    N = addLabels(N, labelColumns);
     objectOut{1,iZ,iT}    = [objectOut{1,iZ,iT};    O];
     pairOut{1,iZ,iT}      = [pairOut{1,iZ,iT};      P];
     summaryOut{1,iZ,iT}   = [summaryOut{1,iZ,iT};   S];
@@ -159,6 +183,42 @@ end
 
 end % colocObjectOverlap
 
+
+% =========================================================================
+function v = objColumn(S, name)
+% column NAME of S for the rows kept by pixLists/objIDs (non-empty pixel
+% lists), as double; NaN when S lacks the column
+if ~istable(S) || isempty(S)
+    v = zeros(0, 1);
+    return
+end
+keep = ~cellfun(@isempty, S.organellePixelIdxList);
+if ismember(name, S.Properties.VariableNames)
+    v = double(S.(name)(keep));
+else
+    v = nan(nnz(keep), 1);
+end
+v = v(:);
+end % objColumn
+
+% =========================================================================
+function T = addLabels(T, labels)
+% append constant columns (e.g. cisternaeClass, streamsThreshold) to every
+% table that has variables; a bare 0x0 table.empty is left alone so it
+% still vertically concatenates with anything
+if ~istable(T) || width(T) == 0
+    return
+end
+n = height(T);
+for f = fieldnames(labels)'
+    val = labels.(f{1});
+    if ischar(val) || isstring(val)
+        T.(f{1}) = repmat({char(val)}, n, 1);
+    else
+        T.(f{1}) = repmat(double(val), n, 1);
+    end
+end
+end % addLabels
 
 % =========================================================================
 function S = cellRows(S, g)

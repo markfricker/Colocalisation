@@ -92,6 +92,37 @@ classdef testColocCisternaeObjects < matlab.unittest.TestCase
             tc.verifyGreaterThan(height(N{1}), 0);
         end
 
+        function testSavedFlagTakesPrecedence(tc)
+            cs = {testColocCisternaeObjects.cisternae(true)};
+            cs{1}.cisternaeIsStream = [1; 0; 0];         % deliberately disagrees with speed
+            str = colocCisternaeObjects(cs, 'streams', 0.5);
+            tc.verifyEqual(str{1}.organelleID, 1);        % flag wins over speed >= 0.5
+            ord = colocCisternaeObjects(cs, 'ordinary', 0.5);
+            tc.verifyEqual(ord{1}.organelleID, [2; 3]);
+        end
+
+        function testIsStreamCarriedAndLabelsStamped(tc)
+            r = @testColocCisternaeObjects.rect;
+            cellID = ones(testColocCisternaeObjects.Sz); cellID(:, 51:end) = 2;
+            cs = testColocCisternaeObjects.cisternae(true);
+            cs.cellID = [1; 1; 2];                       % cisterna 3 in cell 2
+            cis = colocCisternaeObjects({cs}, 'all', 0.5);
+            org = {table({r(15:17,15:17); r(64:66,64:66); r(90:92,90:92)}, [1;2;3], [1;2;2], ...
+                'VariableNames', {'organellePixelIdxList','organelleID','cellID'})};
+            lab = struct('cisternaeClass', 'all', 'streamsThreshold', 0.5);
+            [O, P, S, N] = colocObjectOverlap(cis, cellID, 1, 1, 0.1, 0.2, 0, 'f', ...
+                struct('statsB', {org}, 'labelColumns', lab));
+            O = O{1}; P = P{1}; S = S{1}; N = N{1};
+            OA = O(O.partnerChannel == 1 & ~isnan(O.isStream), :);
+            tc.verifyEqual(sortrows([OA.organelleID OA.isStream]), [1 0; 2 1; 3 1]);
+            tc.verifyEqual(nnz(isnan(O.isStream)), 3);                 % the 3 organelle rows
+            for T = {O, P, S, N}
+                tc.verifyTrue(all(strcmp(T{1}.cisternaeClass, 'all')));
+                tc.verifyTrue(all(T{1}.streamsThreshold == 0.5));
+            end
+            tc.verifyEqual(height(S), 2);                % both cells, one plane: concatenated fine
+        end
+
         function testCellInOnlyOnePopulation(tc)
             r = @testColocCisternaeObjects.rect;
             cellID = ones(testColocCisternaeObjects.Sz); cellID(:, 51:end) = 2;
