@@ -1,0 +1,334 @@
+function [objectOut, pairOut, summaryOut] = colocObjectOverlap(morphologyStats, cellIDIn, chA, chB, calibration, contactDistance, nShuffles, code, opts)
+%COLOCOBJECTOVERLAP  Object-based colocalisation between two segmented
+% organelle channels: per-pair overlap, per-object overlap/contact/nearest
+% distance, per-cell summary, and an object-shuffle significance test.
+%
+%   [objectOut, pairOut, summaryOut] = colocObjectOverlap(morphologyStats, ...
+%       cellIDIn, chA, chB, calibration, contactDistance, nShuffles, code, opts)
+%
+% Object-based counterpart to the pixel-based core (colocPixelBasedRun):
+% rather than asking whether two channels' INTENSITIES co-vary, it asks
+% which segmented object in channel A overlaps / touches which object in
+% channel B, and by how much -- the numbers DiAna (Gilles et al. 2017,
+% Methods 115:55-64) reports, e.g. "40% of peroxisomes touch a
+% mitochondrion".
+%
+% How this differs from organelleD2ErCompute's organelleErOverlapArea:
+% that measures one organelle population against the ER, a single
+% continuous network represented by its 1-px skeleton centreline (+
+% cisternae), so it is one-sided (fraction of the organelle only) and has
+% no partner identity. Here BOTH populations are discrete, full-area
+% segmented objects, so every overlapping pair has an identity and a
+% fraction on each side (fracOfA, fracOfB, Jaccard), and every object has
+% a partner count.
+%
+% SIGNIFICANCE: within each cell, channel B's objects are re-placed at
+% random (shape kept, no B-B overlaps, may overlap A; shuffleObjectsInWindow
+% from OrganelleDistances_sandbox) nShuffles times, and two per-cell
+% statistics are recomputed:
+%   - objM1        : overlapping area / total A area (object-level Manders)
+%   - fracAContact : fraction of A objects within contactDistance of any B
+% Monte Carlo p = (1 + #{sim >= obs}) / (nShuffles + 1) for "more than
+% chance" (and <= for "less than chance"). Overlap area is symmetric, so
+% one shuffle direction suffices for the overlap test.
+%
+% INPUTS
+%   morphologyStats - {nC x nZ x nT} organelle stats tables (as produced by
+%                     analyzerFeatureAnalysis). Each needs
+%                     .organellePixelIdxList (linear indices into an
+%                     [nY nX] plane), .organelleID and .cellID.
+%   cellIDIn        - [nY x nX x cC x cZ x cT] cell label image. The plane
+%                     for channel chA is used for both populations.
+%   chA, chB        - channel indices of the two populations (must differ).
+%   calibration     - microns per pixel.
+%   contactDistance - microns; edge-to-edge distance counted as "in
+%                     contact" (0 = touching/overlapping only).
+%   nShuffles       - shuffles per cell for the significance test (0 =
+%                     descriptive only, p-values NaN).
+%   code            - filename string stamped into every row.
+%   opts            - (optional) struct:
+%     .dihedral    - random 90-degree rotation/flip of shuffled objects
+%                    (default false).
+%     .rngSeed     - reproducible shuffles (global RNG restored after).
+%     .progressFcn - @(fracDone, message) -> cancelled, once per cell.
+%
+% OUTPUTS (each {1 x nZ x nT} cell array of tables; distances in microns,
+% areas in microns^2)
+%   objectOut  - one row per object of EITHER population: filename,
+%                channel, partnerChannel, section, frame, cellID,
+%                organelleID, area, overlapArea (with any partner),
+%                overlapFraction, nPartners, nearestPartnerDistance
+%                (edge-to-edge, 0 if overlapping, NaN if no partner in the
+%                cell), contactFraction (perimeter pixels within
+%                contactDistance of the partner population),
+%                colocalised (overlapArea > 0), inContact
+%                (nearestPartnerDistance <= contactDistance).
+%   pairOut    - one row per overlapping (A,B) pair: filename, channelA,
+%                channelB, section, frame, cellID, organelleIDA,
+%                organelleIDB, overlapArea, fracOfA, fracOfB, jaccard.
+%   summaryOut - one row per cell: filename, channel (=chA),
+%                partnerChannel (=chB), section, frame, cellID, nA, nB,
+%                nPairs, fracAOverlapping, fracBOverlapping, objM1, objM2,
+%                meanPairJaccard, fracAContact, fracBContact,
+%                pMoreOverlap, pLessOverlap, objM1NullMean, pMoreContact,
+%                pLessContact, fracAContactNullMean, fallbackFraction,
+%                nShuffles.
+
+if nargin < 9 || isempty(opts)
+    opts = struct();
+end
+if chA == chB
+    error('colocObjectOverlap:sameChannel', 'chA and chB must be different channels.');
+end
+shOpts = struct('dihedral', isfield(opts,'dihedral') && ~isempty(opts.dihedral) && opts.dihedral);
+progressFcn = [];
+if isfield(opts, 'progressFcn'), progressFcn = opts.progressFcn; end
+if isfield(opts, 'rngSeed') && ~isempty(opts.rngSeed)
+    prevState  = rng(opts.rngSeed);
+    restoreRng = onCleanup(@() rng(prevState)); %#ok<NASGU>
+end
+
+[nC_in, nZ, nT]    = size(morphologyStats);
+[nY, nX, cC, cZ, cT] = size(cellIDIn);
+objectOut  = cell(1, nZ, nT);
+pairOut    = cell(1, nZ, nT);
+summaryOut = cell(1, nZ, nT);
+if max(chA, chB) > nC_in
+    return
+end
+
+% cell count for progress reporting
+jobs = zeros(0, 3);
+for iT = 1:nT
+    for iZ = 1:nZ
+        g = cellsInPlane(morphologyStats{chA,iZ,iT}, morphologyStats{chB,iZ,iT});
+        jobs = [jobs; repmat([iZ iT], numel(g), 1), g(:)]; %#ok<AGROW>
+    end
+end
+nJobs = size(jobs, 1);
+
+for iJob = 1:nJobs
+    iZ = jobs(iJob,1); iT = jobs(iJob,2); g = jobs(iJob,3);
+    SA = morphologyStats{chA,iZ,iT};
+    SB = morphologyStats{chB,iZ,iT};
+    SA = SA(SA.cellID == g, :);
+    SB = SB(SB.cellID == g, :);
+    cellMask = cellIDIn(:,:, min(cC,chA), min(cZ,iZ), min(cT,iT)) == g;
+
+    meta = struct('code', code, 'chA', chA, 'chB', chB, 'iZ', iZ, 'iT', iT, 'g', g);
+    [O, P, S] = cellOverlap(SA, SB, cellMask, [nY nX], calibration, ...
+        contactDistance, nShuffles, shOpts, meta);
+    objectOut{1,iZ,iT}  = [objectOut{1,iZ,iT};  O];
+    pairOut{1,iZ,iT}    = [pairOut{1,iZ,iT};    P];
+    summaryOut{1,iZ,iT} = [summaryOut{1,iZ,iT}; S];
+
+    if ~isempty(progressFcn)
+        if progressFcn(iJob / nJobs, sprintf('Object overlap: cell %d of %d', iJob, nJobs))
+            return
+        end
+    end
+end
+
+end % colocObjectOverlap
+
+
+% =========================================================================
+function g = cellsInPlane(SA, SB)
+g = [];
+for S = {SA, SB}
+    s = S{1};
+    if istable(s) && ~isempty(s) && ismember('cellID', s.Properties.VariableNames)
+        g = [g; s.cellID(:)]; %#ok<AGROW>
+    end
+end
+g = unique(g(g > 0));
+end % cellsInPlane
+
+
+% =========================================================================
+function [O, P, S] = cellOverlap(SA, SB, cellMask, imSize, cal, dContact, nShuffles, shOpts, meta)
+%CELLOVERLAP  Single-cell worker -- see colocObjectOverlap for docs.
+
+pixA = pixLists(SA);  idA = objIDs(SA);  nA = numel(pixA);
+pixB = pixLists(SB);  idB = objIDs(SB);  nB = numel(pixB);
+
+% --- crop to the cell + all its objects ----------------------------------
+[rM, cM] = find(cellMask);
+[rO, cO] = ind2sub(imSize, cat(1, pixA{:}, pixB{:}, zeros(0,1)));
+rr = [rM; rO]; cc = [cM; cO];
+r0 = max(1, min(rr) - 1);  r1 = min(imSize(1), max(rr) + 1);
+c0 = max(1, min(cc) - 1);  c1 = min(imSize(2), max(cc) + 1);
+nYc = r1 - r0 + 1;  nXc = c1 - c0 + 1;
+toCrop = @(idx) cropIdx(idx, imSize, r0, c0, nYc);
+cpA = cellfun(toCrop, pixA, 'UniformOutput', false);
+cpB = cellfun(toCrop, pixB, 'UniformOutput', false);
+window = cellMask(r0:r1, c0:c1);
+
+LA = labelFrom(cpA, [nYc nXc]);
+LB = labelFrom(cpB, [nYc nXc]);
+edgeA = boundaryPixels(LA);
+edgeB = boundaryPixels(LB);
+areaA = reshape(cellfun(@numel, cpA), [], 1) * cal^2;
+areaB = reshape(cellfun(@numel, cpB), [], 1) * cal^2;
+idA = reshape(idA, [], 1);
+idB = reshape(idB, [], 1);
+
+% --- pairs ---------------------------------------------------------------
+ovMask = LA > 0 & LB > 0;
+if any(ovMask(:))
+    pr = [LA(ovMask) LB(ovMask)];
+    [upr, ~, j] = unique(pr, 'rows');
+    ovPix = accumarray(j, 1);
+else
+    upr = zeros(0, 2); ovPix = zeros(0, 1);
+end
+ovArea = ovPix * cal^2;
+nPairs = size(upr, 1);
+fracOfA = ovArea ./ areaA(upr(:,1));
+fracOfB = ovArea ./ areaB(upr(:,2));
+jac     = ovArea ./ (areaA(upr(:,1)) + areaB(upr(:,2)) - ovArea);
+P = table(repmat({meta.code}, nPairs, 1), repmat(meta.chA, nPairs, 1), ...
+    repmat(meta.chB, nPairs, 1), repmat(meta.iZ, nPairs, 1), repmat(meta.iT, nPairs, 1), ...
+    repmat(meta.g, nPairs, 1), idA(upr(:,1)), idB(upr(:,2)), ovArea, fracOfA, fracOfB, jac, ...
+    'VariableNames', {'filename','channelA','channelB','section','frame','cellID', ...
+    'organelleIDA','organelleIDB','overlapArea','fracOfA','fracOfB','jaccard'});
+
+% --- per object, both directions ------------------------------------------
+[OA, nearA] = objectRows(cpA, idA, areaA, LB > 0, edgeA, upr(:,1), ovArea, cal, dContact, meta, meta.chA, meta.chB);
+[OB, nearB] = objectRows(cpB, idB, areaB, LA > 0, edgeB, upr(:,2), ovArea, cal, dContact, meta, meta.chB, meta.chA);
+O = [OA; OB];
+
+% --- per cell summary + shuffle test --------------------------------------
+totA = sum(areaA);  totB = sum(areaB);
+ovTot = nnz(ovMask) * cal^2;
+objM1 = ovTot / totA;
+objM2 = ovTot / totB;
+fracAContact = mean(nearA <= dContact);
+fracBContact = mean(nearB <= dContact);
+
+[pMoreOv, pLessOv, m1Null, pMoreCt, pLessCt, ctNull, fbFrac] = deal(NaN);
+if nShuffles > 0 && nA > 0 && nB > 0 && any(window(:))
+    Amask = LA > 0;
+    simM1 = zeros(nShuffles, 1);
+    simCt = zeros(nShuffles, 1);
+    nFb = 0;
+    for s = 1:nShuffles
+        [placed, fb] = shuffleObjectsInWindow(cpB, window, shOpts);
+        nFb = nFb + nnz(fb);
+        Bm = false(nYc, nXc);
+        Bm(cat(1, placed{:})) = true;
+        simM1(s) = nnz(Amask & Bm) * cal^2 / totA;
+        DB = double(bwdist(Bm)) * cal;
+        nearSim = cellfun(@(x) min(DB(x)), cpA);
+        simCt(s) = mean(nearSim <= dContact);
+    end
+    [pMoreOv, pLessOv] = mcP(objM1, simM1);
+    [pMoreCt, pLessCt] = mcP(fracAContact, simCt);
+    m1Null = mean(simM1);
+    ctNull = mean(simCt);
+    fbFrac = nFb / (nShuffles * nB);
+end
+if nA == 0 || nB == 0
+    [objM1, objM2, fracAContact, fracBContact] = deal(NaN);
+    if nA == 0, objM2 = 0; end
+    if nB == 0, objM1 = 0; end
+end
+
+S = table({meta.code}, meta.chA, meta.chB, meta.iZ, meta.iT, meta.g, nA, nB, nPairs, ...
+    'VariableNames', {'filename','channel','partnerChannel','section','frame','cellID','nA','nB','nPairs'});
+S.fracAOverlapping = safeMean(ismember((1:nA)', upr(:,1)), nA);
+S.fracBOverlapping = safeMean(ismember((1:nB)', upr(:,2)), nB);
+S.objM1 = objM1;
+S.objM2 = objM2;
+S.meanPairJaccard = safeMean(jac, nPairs);
+S.fracAContact = fracAContact;
+S.fracBContact = fracBContact;
+S.pMoreOverlap = pMoreOv;
+S.pLessOverlap = pLessOv;
+S.objM1NullMean = m1Null;
+S.pMoreContact = pMoreCt;
+S.pLessContact = pLessCt;
+S.fracAContactNullMean = ctNull;
+S.fallbackFraction = fbFrac;
+S.nShuffles = nShuffles;
+
+end % cellOverlap
+
+
+% =========================================================================
+function [O, nearest] = objectRows(cp, ids, areas, partnerMask, edgeMask, pairOwner, ovArea, cal, dContact, meta, ch, partnerCh)
+n = numel(cp);
+nearest = nan(n, 1);
+contact = nan(n, 1);
+if any(partnerMask(:))
+    D = double(bwdist(partnerMask)) * cal;
+    for k = 1:n
+        nearest(k) = min(D(cp{k}));
+        pk = cp{k}(edgeMask(cp{k}));
+        contact(k) = mean(D(pk) <= dContact);
+    end
+end
+ovObj = accumarray(pairOwner(:), ovArea(:), [n 1]);  % sum over this object's pairs
+nPart = accumarray(pairOwner(:), 1, [n 1]);
+O = table(repmat({meta.code}, n, 1), repmat(ch, n, 1), repmat(partnerCh, n, 1), ...
+    repmat(meta.iZ, n, 1), repmat(meta.iT, n, 1), repmat(meta.g, n, 1), ids, areas, ...
+    ovObj, ovObj ./ areas, nPart, nearest, contact, double(ovObj > 0), double(nearest <= dContact), ...
+    'VariableNames', {'filename','channel','partnerChannel','section','frame','cellID', ...
+    'organelleID','area','overlapArea','overlapFraction','nPartners', ...
+    'nearestPartnerDistance','contactFraction','colocalised','inContact'});
+end % objectRows
+
+
+% =========================================================================
+function p = pixLists(S)
+if istable(S) && ~isempty(S)
+    p = cellfun(@(x) double(x(:)), S.organellePixelIdxList, 'UniformOutput', false);
+    keep = ~cellfun(@isempty, p);
+    p = p(keep);
+else
+    p = cell(0, 1);
+end
+end
+
+function id = objIDs(S)
+if istable(S) && ~isempty(S)
+    keep = ~cellfun(@isempty, S.organellePixelIdxList);
+    if ismember('organelleID', S.Properties.VariableNames)
+        id = double(S.organelleID(keep));
+    else
+        id = find(keep);
+    end
+else
+    id = zeros(0, 1);
+end
+end
+
+function c = cropIdx(idx, imSize, r0, c0, nYc)
+[r, cc] = ind2sub(imSize, idx);
+c = (r - r0 + 1) + (cc - c0) * nYc;
+end
+
+function L = labelFrom(cp, sz)
+L = zeros(sz);
+for k = 1:numel(cp)
+    L(cp{k}) = k;
+end
+end
+
+function E = boundaryPixels(L)
+% object pixels with a 4-neighbour carrying a different label (incl. 0)
+P = padarray(L, [1 1], 0);
+C = P(2:end-1, 2:end-1);
+E = C > 0 & (P(1:end-2,2:end-1) ~= C | P(3:end,2:end-1) ~= C | ...
+             P(2:end-1,1:end-2) ~= C | P(2:end-1,3:end) ~= C);
+end
+
+function [pMore, pLess] = mcP(obs, sims)
+n = numel(sims);
+pMore = (1 + sum(sims >= obs)) / (n + 1);
+pLess = (1 + sum(sims <= obs)) / (n + 1);
+end
+
+function m = safeMean(x, n)
+if n == 0, m = NaN; else, m = mean(double(x)); end
+end
