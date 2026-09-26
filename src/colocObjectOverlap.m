@@ -57,11 +57,24 @@ function [objectOut, pairOut, summaryOut, neighbourOut] = colocObjectOverlap(mor
 %                    neighbourOut (default 3; 0 = skip).
 %     .labelColumns - struct of constants appended as columns to every output
 %                    table, recording the run settings (e.g.
-%                    struct('cisternaeClass','streams','streamsThreshold',0.5)),
+%                    struct('cisternaeClass','all','streamsThreshold',0.5)),
 %                    so saved sheets from different runs stay distinguishable.
-%                    If any input table has an isStream column, objectOut
-%                    also gets a per-object isStream column (NaN for the
-%                    population without it).
+%     .partnerAttributes - cellstr of per-object columns of population A
+%                    (e.g. {'isStream','cisternaeSpeedMax'} for ER cisternae)
+%                    carried into the outputs so a class split can be made
+%                    downstream (e.g. in R, at any threshold) instead of
+%                    choosing a class before the run. For each name X:
+%                      pairOut      X of the pair's A object
+%                      objectOut    X (A rows, own value), nearestPartnerX
+%                                   and maxOverlapPartnerX (B rows: value of
+%                                   the nearest A partner by edge distance /
+%                                   the max over overlapping A partners)
+%                      neighbourOut partnerX (B-direction rows)
+%                    If X is 'isStream', B rows also get overlapAreaStream,
+%                    overlapAreaOrdinary, nPartnersStream, and summaryOut gets
+%                    nStreams, fracBOverlappingStream, fracBOverlappingOrdinary.
+%                    Default: {'isStream'} when any A table has isStream.
+%                    NaN where not applicable.
 %     .statsB      - {nCb x nZ x nT} stats array for population B, when it
 %                    does not live in morphologyStats (e.g. A = ER
 %                    cisternae via colocCisternaeObjects, B = organelle
@@ -131,11 +144,16 @@ if chA > nC_in || chB > size(statsB, 1)
     return
 end
 
-% Optional per-object isStream flag (ER cisternae via colocCisternaeObjects)
-% is carried into objectOut whenever ANY input table has it, so every cell's
-% table has the same columns (NaN for objects of a population without it).
-hasIsStream = @(X) any(cellfun(@(t) istable(t) && ismember('isStream', t.Properties.VariableNames), X(:)));
-carryStream = hasIsStream(morphologyStats(chA,:,:)) || hasIsStream(statsB(chB,:,:));
+% Per-object attributes of population A carried into the outputs (see
+% opts.partnerAttributes). Default: isStream if any A table has it, so the
+% ER cisternae flag is always carried.
+attrNames = {};
+if isfield(opts, 'partnerAttributes') && ~isempty(opts.partnerAttributes)
+    attrNames = cellstr(opts.partnerAttributes);
+elseif any(cellfun(@(t) istable(t) && ismember('isStream', t.Properties.VariableNames), ...
+        reshape(morphologyStats(chA,:,:), [], 1)))
+    attrNames = {'isStream'};
+end
 labelColumns = struct();
 if isfield(opts, 'labelColumns') && isstruct(opts.labelColumns)
     labelColumns = opts.labelColumns;
@@ -161,10 +179,7 @@ for iJob = 1:nJobs
 
     meta = struct('code', code, 'chA', chA, 'chB', chB, 'iZ', iZ, 'iT', iT, 'g', g);
     [O, P, S, N] = cellOverlap(SA, SB, cellMask, [nY nX], calibration, ...
-        contactDistance, nShuffles, shOpts, meta, kNearest);
-    if carryStream
-        O.isStream = [objColumn(SA, 'isStream'); objColumn(SB, 'isStream')];
-    end
+        contactDistance, nShuffles, shOpts, meta, kNearest, attrNames);
     O = addLabels(O, labelColumns);
     P = addLabels(P, labelColumns);
     S = addLabels(S, labelColumns);
@@ -244,7 +259,7 @@ end % cellsInPlane
 
 
 % =========================================================================
-function [O, P, S, N] = cellOverlap(SA, SB, cellMask, imSize, cal, dContact, nShuffles, shOpts, meta, kNearest)
+function [O, P, S, N] = cellOverlap(SA, SB, cellMask, imSize, cal, dContact, nShuffles, shOpts, meta, kNearest, attrNames)
 %CELLOVERLAP  Single-cell worker -- see colocObjectOverlap for docs.
 
 pixA = pixLists(SA);  idA = objIDs(SA);  nA = numel(pixA);
@@ -300,8 +315,8 @@ O = [OA; OB];
 % Edge distance E(a,b) = closest pixel-to-pixel distance, symmetric, so one
 % distance transform per object of the SMALLER population fills the matrix.
 N = table.empty;
-if kNearest > 0 && nA > 0 && nB > 0
-    E = zeros(nA, nB);
+E = zeros(nA, nB);
+if (kNearest > 0 || ~isempty(attrNames)) && nA > 0 && nB > 0
     if nA <= nB
         for a = 1:nA
             D = bwdist(LA == a);
@@ -314,11 +329,64 @@ if kNearest > 0 && nA > 0 && nB > 0
         end
     end
     E = double(E) * cal;   % bwdist returns single
+end
+pidxBA = zeros(0, 1);      % for B-direction neighbour rows: index of the A partner
+nRowsAB = 0;
+if kNearest > 0 && nA > 0 && nB > 0
     cenA = cropCentroidsRC(cpA, nYc);
     cenB = cropCentroidsRC(cpB, nYc);
     C = sqrt((cenA(:,1) - cenB(:,1)').^2 + (cenA(:,2) - cenB(:,2)').^2) * cal;
-    N = [knnRows(idA, idB, E,  C,  kNearest, meta, meta.chA, meta.chB); ...
-         knnRows(idB, idA, E', C', kNearest, meta, meta.chB, meta.chA)];
+    NAB = knnRows(idA, idB, E,  C,  kNearest, meta, meta.chA, meta.chB);
+    [NBA, pidxBA] = knnRows(idB, idA, E', C', kNearest, meta, meta.chB, meta.chA);
+    nRowsAB = height(NAB);
+    N = [NAB; NBA];
+end
+
+% --- population-A attributes carried to partners (e.g. ER cisterna isStream /
+% cisternaeSpeedMax), so the stream split can be made downstream at any
+% threshold. A rows get their own value; B rows get the value of their
+% nearest / fastest-overlapping A partner; pairs and B-direction neighbours
+% get the A partner's value.
+cap = @(s) [upper(s(1)) s(2:end)];
+streamInfo = [];
+if nB > 0 && nA > 0
+    [~, iNearA] = min(E, [], 1);        % nearest A partner of each B (edge distance)
+else
+    iNearA = zeros(1, nB);
+end
+for iAt = 1:numel(attrNames)
+    name = attrNames{iAt};
+    a = objColumn(SA, name);            % nA x 1, kept-row order (NaN if absent)
+    P.(name) = a(upr(:,1));
+    nearVal = nan(nB, 1);
+    if nA > 0 && nB > 0
+        nearVal = a(iNearA(:));
+    end
+    maxOv = nan(nB, 1);
+    for b = 1:nB
+        partners = upr(upr(:,2) == b, 1);
+        if ~isempty(partners)
+            maxOv(b) = max(a(partners));
+        end
+    end
+    O.(name)                                = [a; nan(nB, 1)];
+    O.(['nearestPartner' cap(name)])        = [nan(nA, 1); nearVal];
+    O.(['maxOverlapPartner' cap(name)])     = [nan(nA, 1); maxOv];
+    if istable(N) && width(N) > 0
+        N.(['partner' cap(name)]) = [nan(nRowsAB, 1); a(pidxBA)];
+    end
+    if strcmp(name, 'isStream')
+        isS = a == 1;
+        ovS = accumarray(upr(:,2), ovArea .* isS(upr(:,1)),  [nB 1]);
+        ovO = accumarray(upr(:,2), ovArea .* ~isS(upr(:,1)), [nB 1]);
+        nS  = accumarray(upr(:,2), double(isS(upr(:,1))),   [nB 1]);
+        O.overlapAreaStream   = [nan(nA, 1); ovS];
+        O.overlapAreaOrdinary = [nan(nA, 1); ovO];
+        O.nPartnersStream     = [nan(nA, 1); nS];
+        streamInfo = struct('nStreams', nnz(isS), ...
+            'fracBOverlappingStream',   safeMean(ovS > 0, nB), ...
+            'fracBOverlappingOrdinary', safeMean(ovO > 0, nB));
+    end
 end
 
 % --- per cell summary + shuffle test --------------------------------------
@@ -374,6 +442,11 @@ S.pLessContact = pLessCt;
 S.fracAContactNullMean = ctNull;
 S.fallbackFraction = fbFrac;
 S.nShuffles = nShuffles;
+if ~isempty(streamInfo)
+    S.nStreams                 = streamInfo.nStreams;
+    S.fracBOverlappingStream   = streamInfo.fracBOverlappingStream;
+    S.fracBOverlappingOrdinary = streamInfo.fracBOverlappingOrdinary;
+end
 
 end % cellOverlap
 
@@ -403,18 +476,22 @@ end % objectRows
 
 
 % =========================================================================
-function N = knnRows(ids, partnerIds, E, C, k, meta, ch, partnerCh)
+function [N, pidx] = knnRows(ids, partnerIds, E, C, k, meta, ch, partnerCh)
 %KNNROWS  One row per (object, rank) for the k nearest partners by edge
-% distance (ties broken by centre distance).
+% distance (ties broken by centre distance). pidx = partner index (into
+% partnerIds) of every row, for attaching partner attributes.
 n  = numel(ids);
 kk = min(k, numel(partnerIds));
 rows = cell(n, 1);
+pidxCell = cell(n, 1);
 for i = 1:n
     [~, order] = sortrows([E(i,:)' C(i,:)']);
     j = order(1:kk);
+    pidxCell{i} = j(:);
     rows{i} = table(repmat(ids(i), kk, 1), (1:kk)', partnerIds(j), E(i,j)', C(i,j)', ...
         'VariableNames', {'organelleID','rank','partnerID','edgeDistance','centreDistance'});
 end
+pidx = cat(1, pidxCell{:}, zeros(0, 1));
 N = cat(1, rows{:});
 m = height(N);
 N = [table(repmat({meta.code}, m, 1), repmat(ch, m, 1), repmat(partnerCh, m, 1), ...

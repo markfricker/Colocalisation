@@ -123,6 +123,37 @@ classdef testColocCisternaeObjects < matlab.unittest.TestCase
             tc.verifyEqual(height(S), 2);                % both cells, one plane: concatenated fine
         end
 
+        function testStreamPartnerColumns(tc)
+            % cisternae: C1 ordinary (speed 0.1), C2 stream (0.8), C3 stream (1.5)
+            % organelles: O1 inside C1, O2 inside C2, O3 isolated (nearest C3)
+            r = @testColocCisternaeObjects.rect;
+            cis = colocCisternaeObjects({testColocCisternaeObjects.cisternae(true)}, 'all', 0.5);
+            org = cell(2, 1);                              % organelles in channel 2
+            org{2} = table({r(15:17,15:17); r(15:17,45:47); r(80:82,80:82)}, [1;2;3], [1;1;1], ...
+                'VariableNames', {'organellePixelIdxList','organelleID','cellID'});
+            [O, P, S, N] = colocObjectOverlap(cis, ones(testColocCisternaeObjects.Sz), 1, 2, 0.1, 0.2, 0, 'f', ...
+                struct('statsB', {org}, 'kNearest', 1, 'partnerAttributes', {{'isStream','cisternaeSpeedMax'}}));
+            O = O{1}; P = P{1}; S = S{1}; N = N{1};
+            OB = sortrows(O(O.channel == 2, :), 'organelleID');
+            a9 = 9 * 0.1^2;
+            tc.verifyEqual(OB.overlapAreaOrdinary, [a9; 0; 0], 'AbsTol', 1e-12);
+            tc.verifyEqual(OB.overlapAreaStream,   [0; a9; 0], 'AbsTol', 1e-12);
+            tc.verifyEqual(OB.nPartnersStream, [0; 1; 0]);
+            tc.verifyEqual(OB.nearestPartnerIsStream, [0; 1; 1]);
+            tc.verifyEqual(OB.nearestPartnerCisternaeSpeedMax, [0.1; 0.8; 1.5], 'AbsTol', 1e-6);
+            tc.verifyEqual(OB.maxOverlapPartnerCisternaeSpeedMax(1:2), [0.1; 0.8], 'AbsTol', 1e-6);
+            tc.verifyTrue(isnan(OB.maxOverlapPartnerCisternaeSpeedMax(3)));   % overlaps nothing
+            OA = sortrows(O(O.channel == 1, :), 'organelleID');
+            tc.verifyEqual(OA.isStream, [0; 1; 1]);                            % own value on cisterna rows
+            tc.verifyTrue(all(isnan(OA.nearestPartnerIsStream)));
+            tc.verifyEqual(sortrows([P.organelleIDA P.isStream]), [1 0; 2 1]);
+            NB = sortrows(N(N.channel == 2, :), 'organelleID');
+            tc.verifyEqual(NB.partnerIsStream, [0; 1; 1]);
+            tc.verifyTrue(all(isnan(N.partnerIsStream(N.channel == 1))));
+            tc.verifyEqual(S.nStreams, 2);
+            tc.verifyEqual([S.fracBOverlappingStream S.fracBOverlappingOrdinary], [1/3 1/3], 'AbsTol', 1e-12);
+        end
+
         function testCellInOnlyOnePopulation(tc)
             r = @testColocCisternaeObjects.rect;
             cellID = ones(testColocCisternaeObjects.Sz); cellID(:, 51:end) = 2;
