@@ -36,9 +36,12 @@ function results = colocPixelBasedRun(ch1, ch2, mask, p)
 %     .costesR           - r of the below-threshold population (<=0 when
 %                           costesFullyConverged, otherwise the achieved
 %                           minimum, still >0).
-%     .manders1/.manders2 - M1/M2 at the Costes threshold (full or
+%     .manders1/.manders2 - thresholded M1/M2 (Coloc2's tM1/tM2, see
+%              colocManders) at the Costes threshold (full or
 %              partial-fallback), or at p.manualThreshold1/2 if no usable
 %              Costes threshold could be found at all.
+%     .costesSlope/.costesIntercept - the orthogonal regression line
+%              ch2 = slope*ch1 + intercept the Costes walk followed.
 %     .mandersThreshold1/.mandersThreshold2 - the threshold pair actually
 %              used for manders1/manders2 above, whichever source it came
 %              from -- callers should not assume that's costesT1/costesT2,
@@ -89,7 +92,8 @@ results = struct();
 [results.pearsonR, results.pearsonN] = colocPearson(ch1, ch2, mask);
 
 [results.costesT1, results.costesT2, results.costesR, results.costesConverged, ...
-    results.costesFullyConverged] = colocCostesThreshold(ch1, ch2, mask);
+    results.costesFullyConverged, results.costesSlope, results.costesIntercept] = ...
+    colocCostesThreshold(ch1, ch2, mask);
 
 if results.costesConverged
     T1 = results.costesT1;

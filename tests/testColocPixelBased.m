@@ -86,6 +86,21 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             ch1 = 100 * rand(imSize);
             ch2 = 0.8 * ch1 + 5;
         end
+
+        function [dense, sparse] = denseSparsePair(imSize, seedVal)
+            % ER/mitochondria-like pair: a DENSE channel (signal over ~60%
+            % of pixels) and a SPARSE one (~10% of pixels, most of them
+            % on dense-channel signal), each with its own independent
+            % background noise. The asymmetry in coverage is what made
+            % the old one-way (OLS, ch1-only) Costes search give
+            % different gates depending on channel order.
+            rng(seedVal);
+            denseSig  = rand(imSize) < 0.6;
+            sparseSig = rand(imSize) < 0.1 & (denseSig | rand(imSize) < 0.3);
+            dense  = 10 + 3*randn(imSize) + 40*denseSig .* (0.5 + rand(imSize));
+            sparse = 10 + 3*randn(imSize) + 80*sparseSig .* (0.5 + rand(imSize)) ...
+                + 0.3*(dense - 10) .* sparseSig;
+        end
     end
 
     % =====================================================================
@@ -186,6 +201,21 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             tc.verifyTrue(isnan(M1));
             tc.verifyFalse(isnan(M2));
         end
+
+        function testMandersDenominatorIsTotalIntensity(tc)
+            % Coloc2 tM1: numerator = ch1 where ch2 >= T2 (ch1's own
+            % threshold not applied), denominator = ALL ch1 in the mask.
+            % ch1 = 1 everywhere; ch2 = 5 in cols 1:5, 1 in cols 6:10,
+            % 0 elsewhere. T2 = 2 keeps only cols 1:5 -> M1 = 5/20.
+            % ch1 = 1 >= T1 = 1 everywhere -> M2 = all of ch2 = 1.
+            ch1 = ones(10, 20);
+            ch2 = zeros(10, 20);
+            ch2(:, 1:5)  = 5;
+            ch2(:, 6:10) = 1;
+            [M1, M2] = colocManders(ch1, ch2, [], 1, 2);
+            tc.verifyEqual(M1, 5/20, 'AbsTol', 1e-12);
+            tc.verifyEqual(M2, 1, 'AbsTol', 1e-12);
+        end
     end
 
     % =====================================================================
@@ -193,19 +223,23 @@ classdef testColocPixelBased < matlab.unittest.TestCase
     % =====================================================================
     methods (Test)
         function testCostesThresholdSeparatesSignalFromBackground(tc)
-            [ch1, ch2] = tc.signalPlusBackgroundPair([100 100], 5);
+            [ch1, ch2, sigMask] = tc.signalPlusBackgroundPair([100 100], 5);
             [T1, T2, rAtThreshold, converged, fullyConverged] = colocCostesThreshold(ch1, ch2, []);
 
             tc.verifyTrue(converged);
             tc.verifyTrue(fullyConverged);
             tc.verifyLessThan(T1, 30);          % well below the 50-100 signal band
+            tc.verifyLessThan(T2, 30);
             tc.verifyLessThanOrEqual(rAtThreshold, 1e-9);
 
-            % Above-threshold population should recover strong overlap
-            % (the near-perfectly-correlated signal block).
+            % M1/M2 (fraction of TOTAL intensity, Coloc2 tM1/tM2) should
+            % capture the whole correlated signal block -- at least its
+            % share of each channel's total intensity.
             [M1, M2] = colocManders(ch1, ch2, [], T1, T2);
-            tc.verifyGreaterThan(M1, 0.7);
-            tc.verifyGreaterThan(M2, 0.7);
+            sigShare1 = sum(ch1(sigMask)) / sum(ch1(:));
+            sigShare2 = sum(ch2(sigMask)) / sum(ch2(:));
+            tc.verifyGreaterThan(M1, 0.99 * sigShare1);
+            tc.verifyGreaterThan(M2, 0.99 * sigShare2);
         end
 
         function testCostesThresholdPartialConvergenceUsesMinRFallback(tc)
@@ -237,6 +271,62 @@ classdef testColocPixelBased < matlab.unittest.TestCase
 
             tc.verifyFalse(converged);
             tc.verifyTrue(isnan(T1));
+        end
+
+        function testCostesThresholdOrthogonalSlope(tc)
+            % Exact line: orthogonal regression recovers it exactly, and
+            % (unlike OLS of ch2 on ch1) swapping the channels gives the
+            % reciprocal slope.
+            [ch1, ch2] = tc.wholeRangeCorrelatedPair([60 60], 52);
+            [~, ~, ~, ~, ~, a, b] = colocCostesThreshold(ch1, ch2, []);
+            tc.verifyEqual(a, 0.8, 'AbsTol', 1e-9);
+            tc.verifyEqual(b, 5, 'AbsTol', 1e-7);
+
+            [dense, sparse] = tc.denseSparsePair([80 80], 53);
+            [~, ~, ~, ~, ~, a12] = colocCostesThreshold(dense, sparse, []);
+            [~, ~, ~, ~, ~, a21] = colocCostesThreshold(sparse, dense, []);
+            tc.verifyEqual(a12 * a21, 1, 'AbsTol', 1e-9);
+        end
+
+        function testCostesThresholdChannelSwapSymmetric(tc)
+            % Costes' method treats the two channels alike: swapping ch1
+            % and ch2 must swap T1/T2 and M1/M2 and leave the colocalised
+            % (score-map) population unchanged -- the regression for the
+            % ER-vs-organelle-strand discrepancy.
+            [dense, sparse] = tc.denseSparsePair([120 120], 54);
+
+            [T1a, T2a, ra, conv] = colocCostesThreshold(dense, sparse, []);
+            [T1b, T2b, rb]       = colocCostesThreshold(sparse, dense, []);
+            tc.assertTrue(conv);
+            tol = 1e-9 * max([abs(dense(:)); abs(sparse(:))]);
+            tc.verifyEqual(T1b, T2a, 'AbsTol', tol);
+            tc.verifyEqual(T2b, T1a, 'AbsTol', tol);
+            tc.verifyEqual(rb, ra, 'AbsTol', 1e-9);
+
+            [M1a, M2a] = colocManders(dense, sparse, [], T1a, T2a);
+            [M1b, M2b] = colocManders(sparse, dense, [], T1b, T2b);
+            tc.verifyEqual(M1b, M2a, 'AbsTol', 1e-6);
+            tc.verifyEqual(M2b, M1a, 'AbsTol', 1e-6);
+
+            [~, gateA] = colocScoreImage(dense, sparse, [], T1a, T2a, 'geomean');
+            [~, gateB] = colocScoreImage(sparse, dense, [], T1b, T2b, 'geomean');
+            % Allow a single boundary pixel to flip on floating-point
+            % round-off of the derived threshold.
+            tc.verifyLessThanOrEqual(nnz(xor(gateA, gateB)), 1);
+            tc.verifyGreaterThan(nnz(gateA), 0);
+        end
+
+        function testCostesThresholdBelowPopulationUsesBothChannels(tc)
+            % At the returned thresholds, r of the pixels below them
+            % (ch1 < T1 OR ch2 < T2) is what reached <= 0 -- recompute it
+            % directly to check the prefix-sum shortcut.
+            [dense, sparse] = tc.denseSparsePair([100 100], 55);
+            [T1, T2, rAt, ~, full] = colocCostesThreshold(dense, sparse, []);
+            tc.assumeTrue(full);
+            below = dense < T1 | sparse < T2;
+            rDirect = colocPearson(dense, sparse, below);
+            tc.verifyEqual(rDirect, rAt, 'AbsTol', 1e-9);
+            tc.verifyLessThanOrEqual(rDirect, 0);
         end
 
         function testCostesThresholdTooFewPixelsReturnsNotConverged(tc)
@@ -279,6 +369,29 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             tc.verifyEqual(p1, p2);
             tc.verifyEqual(r1, r2);
             tc.verifyEqual(null1, null2);
+        end
+
+        function testRandomizationShufflesOnlyWithinMask(tc)
+            % Correlated signal inside the mask, zero outside. Shuffling
+            % within the mask still gives a null centred on ~0 and a
+            % significant p. A mask too small to hold two whole tiles
+            % has nothing to shuffle, so no null and p = NaN (outside
+            % tiles are never borrowed).
+            [ch1, ch2] = tc.correlatedPair([60 60], 1, 0, 5, 56);
+            mask = false(60, 60);
+            mask(11:50, 11:50) = true;
+            ch1(~mask) = 0;
+            ch2(~mask) = 0;
+            [pValue, robs, rNull] = colocCostesRandomization(ch1, ch2, mask, 100, 4, 3);
+            tc.verifyLessThan(pValue, 0.05);
+            tc.verifyGreaterThan(robs, 0.9);
+            tc.verifyLessThan(abs(mean(rNull)), 0.1);
+
+            tiny = false(60, 60);
+            tiny(1:4, 1:7) = true;   % only one whole 4x4 tile inside
+            [pTiny, ~, nullTiny] = colocCostesRandomization(ch1, ch2, tiny, 10, 4, 3);
+            tc.verifyTrue(isnan(pTiny));
+            tc.verifyTrue(all(isnan(nullTiny)));
         end
 
         function testRandomizationBlockTooLargeErrors(tc)

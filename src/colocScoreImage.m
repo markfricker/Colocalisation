@@ -6,9 +6,11 @@ function [scoreImage, gatedMask] = colocScoreImage(ch1, ch2, mask, T1, T2, score
 % Produces a per-pixel colocalisation "map" for spatial interpretation of
 % where a scalar coefficient (e.g. Manders M1/M2) is actually coming from
 % -- a single number can't show whether colocalisation is concentrated in
-% one region or spread throughout. Pixels failing the mask or the
-% threshold gate (ch1<=T1 or ch2<=T2) are NaN; render these as grey/
-% background, not part of the colour-mapped score.
+% one region or spread throughout. The gate is Costes' colocalised
+% population: both channels present (> 0) and at or above their
+% thresholds (ch1>=T1 AND ch2>=T2, the same ">=" colocCostesThreshold and
+% colocManders use). Pixels failing the mask or the gate are NaN; render
+% these as grey/background, not part of the colour-mapped score.
 %
 % INPUTS
 %   ch1, ch2  - equal-size 2D numeric intensity images.
@@ -18,7 +20,8 @@ function [scoreImage, gatedMask] = colocScoreImage(ch1, ch2, mask, T1, T2, score
 %               pixels in both channels.
 %   T1, T2    - intensity thresholds for ch1/ch2 (e.g. from
 %               colocCostesThreshold, or a manual/background fallback).
-%               A pixel is gated in only if ch1>T1 AND ch2>T2.
+%               A pixel is gated in only if ch1>=T1 AND ch2>=T2 (and
+%               both are > 0).
 %   scoreType - 'geomean' (default) or 'pdm':
 %     'geomean' - sqrt(ch1n .* ch2n), where ch1n/ch2n are each channel
 %                 linearly rescaled 0..1 between its own threshold and
@@ -52,7 +55,7 @@ if nargin < 6 || isempty(scoreType)
 end
 
 mask = mask & isfinite(ch1) & isfinite(ch2);
-gatedMask = mask & ch1 > T1 & ch2 > T2;
+gatedMask = mask & ch1 >= T1 & ch2 >= T2 & ch1 > 0 & ch2 > 0;
 
 scoreImage = nan(size(ch1));
 
