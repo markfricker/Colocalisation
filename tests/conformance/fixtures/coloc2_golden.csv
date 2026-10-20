@@ -1,0 +1,411 @@
+# ij=1.54p99; coloc2jar=file:/C:/Users/dops0035/Documents/Research/Fiji/plugins/Colocalisation_Analysis-3.1.0.jar; java=21.0.7
+case,implementation,name,value
+anticorrelated,Costes,"Coloc_Job_Name","Colocalization_of_anticorrelated_ch1.tif_versus_anticorrelated_ch2.tif_304655244"
+anticorrelated,Costes,"% zero-zero pixels",0.0
+anticorrelated,Costes,"% saturated ch1 pixels",0.01220703125
+anticorrelated,Costes,"% saturated ch2 pixels",5.96923828125
+anticorrelated,Costes,"Channel 1 Max",228.0
+anticorrelated,Costes,"Channel 2 Max",235.0
+anticorrelated,Costes,"Channel 1 Min",20.0
+anticorrelated,Costes,"Channel 2 Min",27.0
+anticorrelated,Costes,"Channel 1 Mean",39.49932861328125
+anticorrelated,Costes,"Channel 2 Mean",215.50067138671875
+anticorrelated,Costes,"Channel 1 Integrated (Sum) Intensity",647157.0
+anticorrelated,Costes,"Channel 2 Integrated (Sum) Intensity",3530763.0
+anticorrelated,Costes,"Mask Type Used","none"
+anticorrelated,Costes,"Mask ID Used",3.04655244E8
+anticorrelated,Costes,"m (slope)",-1.0
+anticorrelated,Costes,"b (y-intercept)",255.0
+anticorrelated,Costes,"b to y-mean ratio",1.1832909770494366
+anticorrelated,Costes,"Ch1 Max Threshold",20.0
+anticorrelated,Costes,"Ch2 Max Threshold",235.0
+anticorrelated,Costes,"Threshold regression","Costes"
+anticorrelated,Costes,"Pearson's R value (no threshold)",-1.0
+anticorrelated,Costes,"Pearson's R value (below threshold)",-0.9999999999999964
+anticorrelated,Costes,"Pearson's R value (above threshold)",-0.9999999999999964
+anticorrelated,Costes,"Manders' M1 (Above zero intensity of Ch2)",1.0
+anticorrelated,Costes,"Manders' M2 (Above zero intensity of Ch1)",1.0
+anticorrelated,Costes,"Manders' tM1 (Above autothreshold of Ch2)",0.015112252513686787
+anticorrelated,Costes,"Manders' tM2 (Above autothreshold of Ch1)",1.0
+anticorrelated,Costes,"Costes P-Value",0.0
+anticorrelated,Costes,"Costes Shuffled Mean",-0.0032223024134634816
+anticorrelated,Costes,"Costes Shuffled Std.D.",0.04803536031646724
+anticorrelated,Costes,"Ratio of rand. Pearsons >= actual Pearsons value ",1.0
+anticorrelated,Costes,"warning","y-intercept far from zero"
+anticorrelated,Costes,"warning","Threshold of ch. 2 too high"
+anticorrelated,Bisection,"Coloc_Job_Name","Colocalization_of_anticorrelated_ch1.tif_versus_anticorrelated_ch2.tif_1458056620"
+anticorrelated,Bisection,"% zero-zero pixels",0.0
+anticorrelated,Bisection,"% saturated ch1 pixels",0.01220703125
+anticorrelated,Bisection,"% saturated ch2 pixels",5.96923828125
+anticorrelated,Bisection,"Channel 1 Max",228.0
+anticorrelated,Bisection,"Channel 2 Max",235.0
+anticorrelated,Bisection,"Channel 1 Min",20.0
+anticorrelated,Bisection,"Channel 2 Min",27.0
+anticorrelated,Bisection,"Channel 1 Mean",39.49932861328125
+anticorrelated,Bisection,"Channel 2 Mean",215.50067138671875
+anticorrelated,Bisection,"Channel 1 Integrated (Sum) Intensity",647157.0
+anticorrelated,Bisection,"Channel 2 Integrated (Sum) Intensity",3530763.0
+anticorrelated,Bisection,"Mask Type Used","none"
+anticorrelated,Bisection,"Mask ID Used",1.45805662E9
+anticorrelated,Bisection,"m (slope)",-1.0
+anticorrelated,Bisection,"b (y-intercept)",255.0
+anticorrelated,Bisection,"b to y-mean ratio",1.1832909770494366
+anticorrelated,Bisection,"Ch1 Max Threshold",22.0
+anticorrelated,Bisection,"Ch2 Max Threshold",233.0
+anticorrelated,Bisection,"Threshold regression","Bisection"
+anticorrelated,Bisection,"Pearson's R value (no threshold)",-1.0
+anticorrelated,Bisection,"Pearson's R value (below threshold)",-0.9999999999999994
+anticorrelated,Bisection,"Pearson's R value (above threshold)",-0.9999999999999994
+anticorrelated,Bisection,"Manders' M1 (Above zero intensity of Ch2)",1.0
+anticorrelated,Bisection,"Manders' M2 (Above zero intensity of Ch1)",1.0
+anticorrelated,Bisection,"Manders' tM1 (Above autothreshold of Ch2)",0.0853363248794342
+anticorrelated,Bisection,"Manders' tM2 (Above autothreshold of Ch1)",0.8970695569201331
+anticorrelated,Bisection,"Costes P-Value",0.0
+anticorrelated,Bisection,"Costes Shuffled Mean",-0.008648450616362248
+anticorrelated,Bisection,"Costes Shuffled Std.D.",0.050254367773020774
+anticorrelated,Bisection,"Ratio of rand. Pearsons >= actual Pearsons value ",1.0
+anticorrelated,Bisection,"warning","y-intercept far from zero"
+anticorrelated,Bisection,"warning","Threshold of ch. 2 too high"
+costesClassic,Costes,"Coloc_Job_Name","Colocalization_of_costesClassic_ch1.tif_versus_costesClassic_ch2.tif_130302555"
+costesClassic,Costes,"% zero-zero pixels",0.018310546875
+costesClassic,Costes,"% saturated ch1 pixels",0.13427734375
+costesClassic,Costes,"% saturated ch2 pixels",0.01220703125
+costesClassic,Costes,"Channel 1 Max",200.0
+costesClassic,Costes,"Channel 2 Max",178.0
+costesClassic,Costes,"Channel 1 Min",0.0
+costesClassic,Costes,"Channel 2 Min",0.0
+costesClassic,Costes,"Channel 1 Mean",36.874755859375
+costesClassic,Costes,"Channel 2 Mean",34.221435546875
+costesClassic,Costes,"Channel 1 Integrated (Sum) Intensity",604156.0
+costesClassic,Costes,"Channel 2 Integrated (Sum) Intensity",560684.0
+costesClassic,Costes,"Mask Type Used","none"
+costesClassic,Costes,"Mask ID Used",1.30302555E8
+costesClassic,Costes,"m (slope)",0.8454386159182123
+costesClassic,Costes,"b (y-intercept)",3.046092990803011
+costesClassic,Costes,"b to y-mean ratio",0.08901125689571404
+costesClassic,Costes,"Ch1 Max Threshold",76.0
+costesClassic,Costes,"Ch2 Max Threshold",67.0
+costesClassic,Costes,"Threshold regression","Costes"
+costesClassic,Costes,"Pearson's R value (no threshold)",0.9308607437409205
+costesClassic,Costes,"Pearson's R value (below threshold)",-0.0011358202342942993
+costesClassic,Costes,"Pearson's R value (above threshold)",0.9892492721506154
+costesClassic,Costes,"Manders' M1 (Above zero intensity of Ch2)",0.9940975509636584
+costesClassic,Costes,"Manders' M2 (Above zero intensity of Ch1)",0.9937166032916938
+costesClassic,Costes,"Manders' tM1 (Above autothreshold of Ch2)",0.5301263249889101
+costesClassic,Costes,"Manders' tM2 (Above autothreshold of Ch1)",0.4974370590207675
+costesClassic,Costes,"Costes P-Value",1.0
+costesClassic,Costes,"Costes Shuffled Mean",0.0011180382506049832
+costesClassic,Costes,"Costes Shuffled Std.D.",0.07385796980203319
+costesClassic,Costes,"Ratio of rand. Pearsons >= actual Pearsons value ",0.0
+costesClassic,Costes,"warning","y-intercept far from zero"
+costesClassic,Costes,"warning","Threshold of ch. 1 too high"
+costesClassic,Costes,"warning","Threshold of ch. 2 too high"
+costesClassic,Bisection,"Coloc_Job_Name","Colocalization_of_costesClassic_ch1.tif_versus_costesClassic_ch2.tif_1493074741"
+costesClassic,Bisection,"% zero-zero pixels",0.018310546875
+costesClassic,Bisection,"% saturated ch1 pixels",0.13427734375
+costesClassic,Bisection,"% saturated ch2 pixels",0.01220703125
+costesClassic,Bisection,"Channel 1 Max",200.0
+costesClassic,Bisection,"Channel 2 Max",178.0
+costesClassic,Bisection,"Channel 1 Min",0.0
+costesClassic,Bisection,"Channel 2 Min",0.0
+costesClassic,Bisection,"Channel 1 Mean",36.874755859375
+costesClassic,Bisection,"Channel 2 Mean",34.221435546875
+costesClassic,Bisection,"Channel 1 Integrated (Sum) Intensity",604156.0
+costesClassic,Bisection,"Channel 2 Integrated (Sum) Intensity",560684.0
+costesClassic,Bisection,"Mask Type Used","none"
+costesClassic,Bisection,"Mask ID Used",1.493074741E9
+costesClassic,Bisection,"m (slope)",0.8454386159182123
+costesClassic,Bisection,"b (y-intercept)",3.046092990803011
+costesClassic,Bisection,"b to y-mean ratio",0.08901125689571404
+costesClassic,Bisection,"Ch1 Max Threshold",77.0
+costesClassic,Bisection,"Ch2 Max Threshold",68.0
+costesClassic,Bisection,"Threshold regression","Bisection"
+costesClassic,Bisection,"Pearson's R value (no threshold)",0.9308607437409205
+costesClassic,Bisection,"Pearson's R value (below threshold)",4.3712281667674134E-4
+costesClassic,Bisection,"Pearson's R value (above threshold)",0.9892492721506154
+costesClassic,Bisection,"Manders' M1 (Above zero intensity of Ch2)",0.9940975509636584
+costesClassic,Bisection,"Manders' M2 (Above zero intensity of Ch1)",0.9937166032916938
+costesClassic,Bisection,"Manders' tM1 (Above autothreshold of Ch2)",0.5299889432530671
+costesClassic,Bisection,"Manders' tM2 (Above autothreshold of Ch1)",0.4974370590207675
+costesClassic,Bisection,"Costes P-Value",1.0
+costesClassic,Bisection,"Costes Shuffled Mean",2.2712980496989222E-4
+costesClassic,Bisection,"Costes Shuffled Std.D.",0.06847260793443093
+costesClassic,Bisection,"Ratio of rand. Pearsons >= actual Pearsons value ",0.0
+costesClassic,Bisection,"warning","y-intercept far from zero"
+costesClassic,Bisection,"warning","Threshold of ch. 1 too high"
+costesClassic,Bisection,"warning","Threshold of ch. 2 too high"
+identical,Costes,"Coloc_Job_Name","Colocalization_of_identical_ch1.tif_versus_identical_ch2.tif_1837150071"
+identical,Costes,"% zero-zero pixels",0.0
+identical,Costes,"% saturated ch1 pixels",0.01220703125
+identical,Costes,"% saturated ch2 pixels",0.01220703125
+identical,Costes,"Channel 1 Max",224.0
+identical,Costes,"Channel 2 Max",224.0
+identical,Costes,"Channel 1 Min",20.0
+identical,Costes,"Channel 2 Min",20.0
+identical,Costes,"Channel 1 Mean",32.6846923828125
+identical,Costes,"Channel 2 Mean",32.6846923828125
+identical,Costes,"Channel 1 Integrated (Sum) Intensity",535506.0
+identical,Costes,"Channel 2 Integrated (Sum) Intensity",535506.0
+identical,Costes,"Mask Type Used","none"
+identical,Costes,"Mask ID Used",1.837150071E9
+identical,Costes,"m (slope)",1.0
+identical,Costes,"b (y-intercept)",0.0
+identical,Costes,"b to y-mean ratio",0.0
+identical,Costes,"Ch1 Max Threshold",1.0
+identical,Costes,"Ch2 Max Threshold",1.0
+identical,Costes,"Threshold regression","Costes"
+identical,Costes,"Pearson's R value (no threshold)",1.0
+identical,Costes,"Pearson's R value (below threshold)",NaN
+identical,Costes,"Pearson's R value (above threshold)",1.0
+identical,Costes,"Manders' M1 (Above zero intensity of Ch2)",1.0
+identical,Costes,"Manders' M2 (Above zero intensity of Ch1)",1.0
+identical,Costes,"Manders' tM1 (Above autothreshold of Ch2)",1.0
+identical,Costes,"Manders' tM2 (Above autothreshold of Ch1)",1.0
+identical,Costes,"Costes P-Value",1.0
+identical,Costes,"Costes Shuffled Mean",-0.004270984006728884
+identical,Costes,"Costes Shuffled Std.D.",0.05133146376626053
+identical,Costes,"Ratio of rand. Pearsons >= actual Pearsons value ",0.0
+identical,Costes,"warning","Probem with input data"
+identical,Costes,"warning","thresholds too low"
+identical,Bisection,"Coloc_Job_Name","Colocalization_of_identical_ch1.tif_versus_identical_ch2.tif_522219499"
+identical,Bisection,"% zero-zero pixels",0.0
+identical,Bisection,"% saturated ch1 pixels",0.01220703125
+identical,Bisection,"% saturated ch2 pixels",0.01220703125
+identical,Bisection,"Channel 1 Max",224.0
+identical,Bisection,"Channel 2 Max",224.0
+identical,Bisection,"Channel 1 Min",20.0
+identical,Bisection,"Channel 2 Min",20.0
+identical,Bisection,"Channel 1 Mean",32.6846923828125
+identical,Bisection,"Channel 2 Mean",32.6846923828125
+identical,Bisection,"Channel 1 Integrated (Sum) Intensity",535506.0
+identical,Bisection,"Channel 2 Integrated (Sum) Intensity",535506.0
+identical,Bisection,"Mask Type Used","none"
+identical,Bisection,"Mask ID Used",5.22219499E8
+identical,Bisection,"m (slope)",1.0
+identical,Bisection,"b (y-intercept)",0.0
+identical,Bisection,"b to y-mean ratio",0.0
+identical,Bisection,"Ch1 Max Threshold",22.0
+identical,Bisection,"Ch2 Max Threshold",22.0
+identical,Bisection,"Threshold regression","Bisection"
+identical,Bisection,"Pearson's R value (no threshold)",1.0
+identical,Bisection,"Pearson's R value (below threshold)",1.0
+identical,Bisection,"Pearson's R value (above threshold)",1.0
+identical,Bisection,"Manders' M1 (Above zero intensity of Ch2)",1.0
+identical,Bisection,"Manders' M2 (Above zero intensity of Ch1)",1.0
+identical,Bisection,"Manders' tM1 (Above autothreshold of Ch2)",0.9387028343286536
+identical,Bisection,"Manders' tM2 (Above autothreshold of Ch1)",0.9387028343286536
+identical,Bisection,"Costes P-Value",1.0
+identical,Bisection,"Costes Shuffled Mean",-5.112831757058297E-4
+identical,Bisection,"Costes Shuffled Std.D.",0.05350179518673511
+identical,Bisection,"Ratio of rand. Pearsons >= actual Pearsons value ",0.0
+independent,Costes,"Coloc_Job_Name","Colocalization_of_independent_ch1.tif_versus_independent_ch2.tif_1994087938"
+independent,Costes,"% zero-zero pixels",0.0
+independent,Costes,"% saturated ch1 pixels",0.01220703125
+independent,Costes,"% saturated ch2 pixels",0.01220703125
+independent,Costes,"Channel 1 Max",230.0
+independent,Costes,"Channel 2 Max",224.0
+independent,Costes,"Channel 1 Min",20.0
+independent,Costes,"Channel 2 Min",20.0
+independent,Costes,"Channel 1 Mean",34.2467041015625
+independent,Costes,"Channel 2 Mean",29.11553955078125
+independent,Costes,"Channel 1 Integrated (Sum) Intensity",561098.0
+independent,Costes,"Channel 2 Integrated (Sum) Intensity",477029.0
+independent,Costes,"Mask Type Used","none"
+independent,Costes,"Mask ID Used",1.994087938E9
+independent,Costes,"m (slope)",0.018615983102023944
+independent,Costes,"b (y-intercept)",28.47800348592655
+independent,Costes,"b to y-mean ratio",0.9781032371478895
+independent,Costes,"Ch1 Max Threshold",89.0
+independent,Costes,"Ch2 Max Threshold",30.0
+independent,Costes,"Threshold regression","Costes"
+independent,Costes,"Pearson's R value (no threshold)",0.027490828755134224
+independent,Costes,"Pearson's R value (below threshold)",-0.0014405013375444634
+independent,Costes,"Pearson's R value (above threshold)",-0.21026832314444402
+independent,Costes,"Manders' M1 (Above zero intensity of Ch2)",1.0
+independent,Costes,"Manders' M2 (Above zero intensity of Ch1)",1.0
+independent,Costes,"Manders' tM1 (Above autothreshold of Ch2)",0.2706532548681336
+independent,Costes,"Manders' tM2 (Above autothreshold of Ch1)",0.03105052313381367
+independent,Costes,"Costes P-Value",0.7726900378669217
+independent,Costes,"Costes Shuffled Mean",-0.005285090722483267
+independent,Costes,"Costes Shuffled Std.D.",0.043833596700340954
+independent,Costes,"Ratio of rand. Pearsons >= actual Pearsons value ",4.545454545454546
+independent,Costes,"warning","y-intercept far from zero"
+independent,Costes,"warning","Threshold of ch. 1 too high"
+independent,Costes,"warning","Threshold of ch. 2 too high"
+independent,Bisection,"Coloc_Job_Name","Colocalization_of_independent_ch1.tif_versus_independent_ch2.tif_719145997"
+independent,Bisection,"% zero-zero pixels",0.0
+independent,Bisection,"% saturated ch1 pixels",0.01220703125
+independent,Bisection,"% saturated ch2 pixels",0.01220703125
+independent,Bisection,"Channel 1 Max",230.0
+independent,Bisection,"Channel 2 Max",224.0
+independent,Bisection,"Channel 1 Min",20.0
+independent,Bisection,"Channel 2 Min",20.0
+independent,Bisection,"Channel 1 Mean",34.2467041015625
+independent,Bisection,"Channel 2 Mean",29.11553955078125
+independent,Bisection,"Channel 1 Integrated (Sum) Intensity",561098.0
+independent,Bisection,"Channel 2 Integrated (Sum) Intensity",477029.0
+independent,Bisection,"Mask Type Used","none"
+independent,Bisection,"Mask ID Used",7.19145997E8
+independent,Bisection,"m (slope)",0.018615983102023944
+independent,Bisection,"b (y-intercept)",28.47800348592655
+independent,Bisection,"b to y-mean ratio",0.9781032371478895
+independent,Bisection,"Ch1 Max Threshold",91.0
+independent,Bisection,"Ch2 Max Threshold",30.0
+independent,Bisection,"Threshold regression","Bisection"
+independent,Bisection,"Pearson's R value (no threshold)",0.027490828755134224
+independent,Bisection,"Pearson's R value (below threshold)",0.0037414240024280154
+independent,Bisection,"Pearson's R value (above threshold)",-0.19301736375092643
+independent,Bisection,"Manders' M1 (Above zero intensity of Ch2)",1.0
+independent,Bisection,"Manders' M2 (Above zero intensity of Ch1)",1.0
+independent,Bisection,"Manders' tM1 (Above autothreshold of Ch2)",0.2706532548681336
+independent,Bisection,"Manders' tM2 (Above autothreshold of Ch1)",0.025876833483918168
+independent,Bisection,"Costes P-Value",0.7426145941586347
+independent,Bisection,"Costes Shuffled Mean",0.0013855259856296797
+independent,Bisection,"Costes Shuffled Std.D.",0.04007402306033853
+independent,Bisection,"Ratio of rand. Pearsons >= actual Pearsons value ",4.0
+independent,Bisection,"warning","y-intercept far from zero"
+independent,Bisection,"warning","Threshold of ch. 1 too high"
+independent,Bisection,"warning","Threshold of ch. 2 too high"
+partialNoisy,Costes,"Coloc_Job_Name","Colocalization_of_partialNoisy_ch1.tif_versus_partialNoisy_ch2.tif_2032862645"
+partialNoisy,Costes,"% zero-zero pixels",0.0
+partialNoisy,Costes,"% saturated ch1 pixels",2.94189453125
+partialNoisy,Costes,"% saturated ch2 pixels",3.22265625
+partialNoisy,Costes,"Channel 1 Max",168.0
+partialNoisy,Costes,"Channel 2 Max",118.0
+partialNoisy,Costes,"Channel 1 Min",10.0
+partialNoisy,Costes,"Channel 2 Min",10.0
+partialNoisy,Costes,"Channel 1 Mean",51.47515869140625
+partialNoisy,Costes,"Channel 2 Mean",38.99951171875
+partialNoisy,Costes,"Channel 1 Integrated (Sum) Intensity",843369.0
+partialNoisy,Costes,"Channel 2 Integrated (Sum) Intensity",638968.0
+partialNoisy,Costes,"Mask Type Used","none"
+partialNoisy,Costes,"Mask ID Used",2.032862645E9
+partialNoisy,Costes,"m (slope)",0.351290419209655
+partialNoisy,Costes,"b (y-intercept)",20.916781643162384
+partialNoisy,Costes,"b to y-mean ratio",0.5363344493645574
+partialNoisy,Costes,"Ch1 Max Threshold",162.0
+partialNoisy,Costes,"Ch2 Max Threshold",78.0
+partialNoisy,Costes,"Threshold regression","Costes"
+partialNoisy,Costes,"Pearson's R value (no threshold)",0.3329129629491447
+partialNoisy,Costes,"Pearson's R value (below threshold)",-0.01799010110377764
+partialNoisy,Costes,"Pearson's R value (above threshold)",-0.4526789977449512
+partialNoisy,Costes,"Manders' M1 (Above zero intensity of Ch2)",1.0
+partialNoisy,Costes,"Manders' M2 (Above zero intensity of Ch1)",1.0
+partialNoisy,Costes,"Manders' tM1 (Above autothreshold of Ch2)",0.4320979310361182
+partialNoisy,Costes,"Manders' tM2 (Above autothreshold of Ch1)",0.3358806700805048
+partialNoisy,Costes,"Costes P-Value",0.9999528932959434
+partialNoisy,Costes,"Costes Shuffled Mean",-0.012700198902464797
+partialNoisy,Costes,"Costes Shuffled Std.D.",0.08850459393544657
+partialNoisy,Costes,"Ratio of rand. Pearsons >= actual Pearsons value ",0.0
+partialNoisy,Costes,"warning","y-intercept far from zero"
+partialNoisy,Costes,"warning","Threshold of ch. 1 too high"
+partialNoisy,Costes,"warning","Threshold of ch. 2 too high"
+partialNoisy,Bisection,"Coloc_Job_Name","Colocalization_of_partialNoisy_ch1.tif_versus_partialNoisy_ch2.tif_1709728332"
+partialNoisy,Bisection,"% zero-zero pixels",0.0
+partialNoisy,Bisection,"% saturated ch1 pixels",2.94189453125
+partialNoisy,Bisection,"% saturated ch2 pixels",3.22265625
+partialNoisy,Bisection,"Channel 1 Max",168.0
+partialNoisy,Bisection,"Channel 2 Max",118.0
+partialNoisy,Bisection,"Channel 1 Min",10.0
+partialNoisy,Bisection,"Channel 2 Min",10.0
+partialNoisy,Bisection,"Channel 1 Mean",51.47515869140625
+partialNoisy,Bisection,"Channel 2 Mean",38.99951171875
+partialNoisy,Bisection,"Channel 1 Integrated (Sum) Intensity",843369.0
+partialNoisy,Bisection,"Channel 2 Integrated (Sum) Intensity",638968.0
+partialNoisy,Bisection,"Mask Type Used","none"
+partialNoisy,Bisection,"Mask ID Used",1.709728332E9
+partialNoisy,Bisection,"m (slope)",0.351290419209655
+partialNoisy,Bisection,"b (y-intercept)",20.916781643162384
+partialNoisy,Bisection,"b to y-mean ratio",0.5363344493645574
+partialNoisy,Bisection,"Ch1 Max Threshold",162.0
+partialNoisy,Bisection,"Ch2 Max Threshold",78.0
+partialNoisy,Bisection,"Threshold regression","Bisection"
+partialNoisy,Bisection,"Pearson's R value (no threshold)",0.3329129629491447
+partialNoisy,Bisection,"Pearson's R value (below threshold)",-0.01799010110377764
+partialNoisy,Bisection,"Pearson's R value (above threshold)",-0.4526789977449512
+partialNoisy,Bisection,"Manders' M1 (Above zero intensity of Ch2)",1.0
+partialNoisy,Bisection,"Manders' M2 (Above zero intensity of Ch1)",1.0
+partialNoisy,Bisection,"Manders' tM1 (Above autothreshold of Ch2)",0.4320979310361182
+partialNoisy,Bisection,"Manders' tM2 (Above autothreshold of Ch1)",0.3358806700805048
+partialNoisy,Bisection,"Costes P-Value",0.9999406467304546
+partialNoisy,Bisection,"Costes Shuffled Mean",0.013864212667975162
+partialNoisy,Bisection,"Costes Shuffled Std.D.",0.08289602790768864
+partialNoisy,Bisection,"Ratio of rand. Pearsons >= actual Pearsons value ",0.0
+partialNoisy,Bisection,"warning","y-intercept far from zero"
+partialNoisy,Bisection,"warning","Threshold of ch. 1 too high"
+partialNoisy,Bisection,"warning","Threshold of ch. 2 too high"
+partialOverlap,Costes,"Coloc_Job_Name","Colocalization_of_partialOverlap_ch1.tif_versus_partialOverlap_ch2.tif_1232018365"
+partialOverlap,Costes,"% zero-zero pixels",62.5
+partialOverlap,Costes,"% saturated ch1 pixels",50.0
+partialOverlap,Costes,"% saturated ch2 pixels",50.0
+partialOverlap,Costes,"Channel 1 Max",150.0
+partialOverlap,Costes,"Channel 2 Max",100.0
+partialOverlap,Costes,"Channel 1 Min",0.0
+partialOverlap,Costes,"Channel 2 Min",0.0
+partialOverlap,Costes,"Channel 1 Mean",37.5
+partialOverlap,Costes,"Channel 2 Mean",25.0
+partialOverlap,Costes,"Channel 1 Integrated (Sum) Intensity",614400.0
+partialOverlap,Costes,"Channel 2 Integrated (Sum) Intensity",409600.0
+partialOverlap,Costes,"Mask Type Used","none"
+partialOverlap,Costes,"Mask ID Used",1.232018365E9
+partialOverlap,Costes,"m (slope)",0.350769913404551
+partialOverlap,Costes,"b (y-intercept)",11.846128247329338
+partialOverlap,Costes,"b to y-mean ratio",0.4738451298931735
+partialOverlap,Costes,"Ch1 Max Threshold",150.0
+partialOverlap,Costes,"Ch2 Max Threshold",64.0
+partialOverlap,Costes,"Threshold regression","Costes"
+partialOverlap,Costes,"Pearson's R value (no threshold)",0.3333333333333333
+partialOverlap,Costes,"Pearson's R value (below threshold)",-0.16666666666666663
+partialOverlap,Costes,"Pearson's R value (above threshold)",NaN
+partialOverlap,Costes,"Manders' M1 (Above zero intensity of Ch2)",0.5
+partialOverlap,Costes,"Manders' M2 (Above zero intensity of Ch1)",0.5
+partialOverlap,Costes,"Manders' tM1 (Above autothreshold of Ch2)",0.5
+partialOverlap,Costes,"Manders' tM2 (Above autothreshold of Ch1)",0.5
+partialOverlap,Costes,"Costes P-Value",0.999964737977116
+partialOverlap,Costes,"Costes Shuffled Mean",0.00199587502324896
+partialOverlap,Costes,"Costes Shuffled Std.D.",0.08336559358823717
+partialOverlap,Costes,"Ratio of rand. Pearsons >= actual Pearsons value ",0.0
+partialOverlap,Costes,"warning","Probem with input data"
+partialOverlap,Costes,"warning","Zero-zero ratio too high"
+partialOverlap,Costes,"warning","Saturated ch1 ratio too high"
+partialOverlap,Costes,"warning","Saturated ch2 ratio too high"
+partialOverlap,Costes,"warning","y-intercept far from zero"
+partialOverlap,Costes,"warning","Threshold of ch. 1 too high"
+partialOverlap,Costes,"warning","Threshold of ch. 2 too high"
+partialOverlap,Bisection,"Coloc_Job_Name","Colocalization_of_partialOverlap_ch1.tif_versus_partialOverlap_ch2.tif_160598969"
+partialOverlap,Bisection,"% zero-zero pixels",62.5
+partialOverlap,Bisection,"% saturated ch1 pixels",50.0
+partialOverlap,Bisection,"% saturated ch2 pixels",50.0
+partialOverlap,Bisection,"Channel 1 Max",150.0
+partialOverlap,Bisection,"Channel 2 Max",100.0
+partialOverlap,Bisection,"Channel 1 Min",0.0
+partialOverlap,Bisection,"Channel 2 Min",0.0
+partialOverlap,Bisection,"Channel 1 Mean",37.5
+partialOverlap,Bisection,"Channel 2 Mean",25.0
+partialOverlap,Bisection,"Channel 1 Integrated (Sum) Intensity",614400.0
+partialOverlap,Bisection,"Channel 2 Integrated (Sum) Intensity",409600.0
+partialOverlap,Bisection,"Mask Type Used","none"
+partialOverlap,Bisection,"Mask ID Used",1.60598969E8
+partialOverlap,Bisection,"m (slope)",0.350769913404551
+partialOverlap,Bisection,"b (y-intercept)",11.846128247329338
+partialOverlap,Bisection,"b to y-mean ratio",0.4738451298931735
+partialOverlap,Bisection,"Ch1 Max Threshold",149.0
+partialOverlap,Bisection,"Ch2 Max Threshold",64.0
+partialOverlap,Bisection,"Threshold regression","Bisection"
+partialOverlap,Bisection,"Pearson's R value (no threshold)",0.3333333333333333
+partialOverlap,Bisection,"Pearson's R value (below threshold)",-0.16666666666666663
+partialOverlap,Bisection,"Pearson's R value (above threshold)",-0.5
+partialOverlap,Bisection,"Manders' M1 (Above zero intensity of Ch2)",0.5
+partialOverlap,Bisection,"Manders' M2 (Above zero intensity of Ch1)",0.5
+partialOverlap,Bisection,"Manders' tM1 (Above autothreshold of Ch2)",0.5
+partialOverlap,Bisection,"Manders' tM2 (Above autothreshold of Ch1)",0.5
+partialOverlap,Bisection,"Costes P-Value",0.9999773864584718
+partialOverlap,Bisection,"Costes Shuffled Mean",0.0094915667068557
+partialOverlap,Bisection,"Costes Shuffled Std.D.",0.07939216506021965
+partialOverlap,Bisection,"Ratio of rand. Pearsons >= actual Pearsons value ",0.0
+partialOverlap,Bisection,"warning","Zero-zero ratio too high"
+partialOverlap,Bisection,"warning","Saturated ch1 ratio too high"
+partialOverlap,Bisection,"warning","Saturated ch2 ratio too high"
+partialOverlap,Bisection,"warning","y-intercept far from zero"
+partialOverlap,Bisection,"warning","Threshold of ch. 1 too high"
+partialOverlap,Bisection,"warning","Threshold of ch. 2 too high"

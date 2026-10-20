@@ -115,7 +115,10 @@ if ~(covXY > 0)
     % once colocalisation started running per-cell, firing once per
     % weakly-correlated cell on every Run). covXY > 0 <=> slope > 0.
     if covXY < 0
-        slope = (varY - varX - sqrt((varY - varX)^2 + 4*covXY^2)) / (2*covXY);
+        % Same major-axis formula as below (Coloc2's, valid for either sign
+        % of the covariance); the '-' root would give the perpendicular
+        % minor axis (+1 instead of -1 for ch2 = c - ch1).
+        slope = (varY - varX + sqrt((varY - varX)^2 + 4*covXY^2)) / (2*covXY);
         intercept = my - slope*mx;
     end
     return
