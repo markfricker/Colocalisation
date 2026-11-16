@@ -61,6 +61,10 @@ function results = colocPixelBasedRun(ch1, ch2, mask, p)
 %              M1/M2 numbers are always consistent with each other. Both
 %              are always computed (cheap relative to the randomisation
 %              test) so a caller can offer either without re-running.
+%     .classImage - uint8 per-pixel class (colocPixelClassImage): 0 not
+%              analysed, 1 neither, 2 ch1 only, 3 ch2 only, 4 both, at the
+%              same mandersThreshold1/2. Unlike the score images it covers
+%              every analysed pixel, so single-channel pixels are visible.
 %
 % REFERENCES
 %   See colocPearson, colocManders, colocCostesThreshold,
@@ -115,5 +119,6 @@ results.maskLinearIdx = linIdx;
 
 results.scoreImageGeomean = colocScoreImage(ch1, ch2, mask, T1, T2, 'geomean');
 results.scoreImagePdm     = colocScoreImage(ch1, ch2, mask, T1, T2, 'pdm');
+results.classImage        = colocPixelClassImage(ch1, ch2, mask, T1, T2);
 
 end % colocPixelBasedRun

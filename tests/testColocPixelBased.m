@@ -471,6 +471,39 @@ classdef testColocPixelBased < matlab.unittest.TestCase
     end
 
     % =====================================================================
+    % colocPixelClassImage
+    % =====================================================================
+    methods (Test)
+        function testClassImageFourClassesAndOutside(tc)
+            % neither | ch1 only | ch2 only | both | outside the mask
+            ch1  = [ 2 20  2 20 20];
+            ch2  = [ 3  3 30 30 30];
+            mask = logical([1 1 1 1 0]);
+            cls = colocPixelClassImage(ch1, ch2, mask, 10, 10);
+
+            tc.verifyClass(cls, 'uint8');
+            tc.verifyEqual(cls, uint8([1 2 3 4 0]));
+        end
+
+        function testClassImageThresholdIsInclusiveAndZeroIsAbsent(tc)
+            % >= T passes; a zero pixel never passes even with T = 0
+            cls = colocPixelClassImage([10 0], [10 5], [], 10, 0);
+            tc.verifyEqual(cls, uint8([4 3]));
+        end
+
+        function testClassImageNonFiniteIsNotAnalysed(tc)
+            cls = colocPixelClassImage([NaN 20], [20 20], [], 10, 10);
+            tc.verifyEqual(cls, uint8([0 4]));
+        end
+
+        function testClassColoursOneRowPerClass(tc)
+            [cmap, labels] = colocPixelClassColours('ER', 'mito');
+            tc.verifySize(cmap, [4 3]);
+            tc.verifyEqual(labels, {'neither', 'ER only', 'mito only', 'both'});
+        end
+    end
+
+    % =====================================================================
     % colocPixelBasedRun (integration)
     % =====================================================================
     methods (Test)
@@ -535,6 +568,27 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             tc.verifyTrue(any(~isnan(results.scoreImagePdm), 'all'));
             % Same gate for both -- identical NaN pattern.
             tc.verifyEqual(isnan(results.scoreImageGeomean), isnan(results.scoreImagePdm));
+        end
+
+        function testPixelBasedRunClassImageMatchesGateAndManders(tc)
+            % Class 4 (both) is exactly the score images' gate, and M1/M2
+            % can be rebuilt from the class map -- so the map and the
+            % numbers can never disagree.
+            [ch1, ch2] = tc.correlatedPair([40 40], 2, 5, 1, 42);
+            mask = false(40, 40);
+            mask(3:38, 3:38) = true;
+            p = colocParamsDefault();
+            p.nIterations = 20;
+            p.blockSize   = 2;
+
+            results = colocPixelBasedRun(ch1, ch2, mask, p);
+            cls = results.classImage;
+
+            tc.verifyEqual(cls == 4, ~isnan(results.scoreImageGeomean));
+            tc.verifyEqual(cls > 0, mask);
+            m = cls > 0;
+            tc.verifyEqual(results.manders1, sum(ch1(cls == 3 | cls == 4)) / sum(ch1(m)), 'AbsTol', 1e-12);
+            tc.verifyEqual(results.manders2, sum(ch2(cls == 2 | cls == 4)) / sum(ch2(m)), 'AbsTol', 1e-12);
         end
     end
 end
