@@ -464,6 +464,24 @@ classdef testColocPixelBased < matlab.unittest.TestCase
             tc.verifyTrue(all(isnan(scoreImage), 'all'));
         end
 
+        function testScoreImagePdmUngatedCoversWholeMask(tc)
+            % Same data as testScoreImagePdmSignConvention: the ungated map
+            % is defined at every mask pixel and equals the gated PDM
+            % wherever the latter exists; ch1-only idx4 (30 vs mask mean
+            % 14, ch2 8 vs mask mean 10.4) is negative.
+            ch1 = [5, 8, 12, 30, 15, 20];
+            ch2 = [5, 9, 25, 8, 5, 30];
+            mask = logical([1 1 1 1 1 0]);
+            [u, gatedU] = colocScoreImage(ch1, ch2, mask, 10, 10, 'pdmUngated');
+            g = colocScoreImage(ch1, ch2, mask, 10, 10, 'pdm');
+
+            tc.verifyEqual(gatedU, mask);
+            tc.verifyTrue(isnan(u(6)));
+            tc.verifyTrue(all(isfinite(u(1:5))));
+            tc.verifyEqual(u(isfinite(g)), g(isfinite(g)), 'AbsTol', 1e-12);
+            tc.verifyLessThan(u(4), 0);
+        end
+
         function testScoreImageUnknownTypeErrors(tc)
             tc.verifyError(@() colocScoreImage([1 2], [1 2], [], 0, 0, 'bogus'), ...
                 'colocScoreImage:unknownScoreType');
@@ -586,6 +604,7 @@ classdef testColocPixelBased < matlab.unittest.TestCase
 
             tc.verifyEqual(cls == 4, ~isnan(results.scoreImageGeomean));
             tc.verifyEqual(cls > 0, mask);
+            tc.verifyEqual(isfinite(results.scoreImagePdmUngated), mask);
             m = cls > 0;
             tc.verifyEqual(results.manders1, sum(ch1(cls == 3 | cls == 4)) / sum(ch1(m)), 'AbsTol', 1e-12);
             tc.verifyEqual(results.manders2, sum(ch2(cls == 2 | cls == 4)) / sum(ch2(m)), 'AbsTol', 1e-12);

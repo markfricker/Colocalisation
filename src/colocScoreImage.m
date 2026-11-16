@@ -36,6 +36,11 @@ function [scoreImage, gatedMask] = colocScoreImage(ch1, ch2, mask, T1, T2, score
 %                 whole-image PDM definition). Signed: positive = this
 %                 pixel pulls Pearson's r upward, negative = pulls it
 %                 down. Use a diverging colormap centred at 0.
+%     'pdmUngated' - the same PDM at EVERY mask pixel, not just the gated
+%                 population. Shows where single-channel pixels (e.g. ER
+%                 with no mitochondrion: ch1 above its mean, ch2 below)
+%                 pull r down -- the gated maps hide all of those.
+%                 gatedMask is then the mask itself.
 %
 % OUTPUTS
 %   scoreImage - same size as ch1, NaN outside the gated population.
@@ -55,7 +60,11 @@ if nargin < 6 || isempty(scoreType)
 end
 
 mask = mask & isfinite(ch1) & isfinite(ch2);
-gatedMask = mask & ch1 >= T1 & ch2 >= T2 & ch1 > 0 & ch2 > 0;
+if strcmpi(scoreType, 'pdmUngated')
+    gatedMask = mask;
+else
+    gatedMask = mask & ch1 >= T1 & ch2 >= T2 & ch1 > 0 & ch2 > 0;
+end
 
 scoreImage = nan(size(ch1));
 
@@ -76,7 +85,7 @@ switch lower(scoreType)
         ch2n = (ch2g - T2) ./ range2;
         scoreImage(gatedMask) = sqrt(ch1n .* ch2n);
 
-    case 'pdm'
+    case {'pdm', 'pdmungated'}
         m1 = mean(double(ch1(mask)));
         m2 = mean(double(ch2(mask)));
         ch1g = double(ch1(gatedMask));
@@ -85,7 +94,7 @@ switch lower(scoreType)
 
     otherwise
         error('colocScoreImage:unknownScoreType', ...
-            'Unknown scoreType ''%s'' -- expected ''geomean'' or ''pdm''.', scoreType);
+            'Unknown scoreType ''%s'' -- expected ''geomean'', ''pdm'' or ''pdmUngated''.', scoreType);
 end
 
 end % colocScoreImage
